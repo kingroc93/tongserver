@@ -1,7 +1,6 @@
 package cube
 
 import (
-	"awesome/datasource"
 	"fmt"
 	"github.com/astaxie/beego/orm"
 	_ "github.com/go-sql-driver/mysql"
@@ -9,6 +8,7 @@ import (
 	"strconv"
 	"testing"
 	"time"
+	"tongserver.dataserver/datasource"
 )
 
 func TestMain(m *testing.M) {
@@ -70,7 +70,22 @@ func TestDictMapping(t *testing.T) {
 	data = Row2Colume(data, "USER_ID", "USER_NAME", "ORG_NAME")
 	printRS(data)
 }
-
+func TestGroupField(t *testing.T) {
+	datatable := datasource.CreateTableDataSource("ST_RIVER_R", "default", "ST_RIVER_R")
+	datatable.RowsLimit = 1000
+	datatable.Orderby("tm", "desc")
+	rs, err := datatable.DoFilter()
+	if err != nil {
+		t.Fatalf("获取数据时发生错误，%s", err.Error())
+	}
+	rss := GroupField(rs, "STCD")
+	for _, item := range rss.Data {
+		fmt.Println("*****************************")
+		fmt.Println(item[0])
+		fmt.Println("*****************************")
+		printRS(item[1].(*datasource.DataResultSet))
+	}
+}
 func TestCompositeDataSource(t *testing.T) {
 	datatable := datasource.CreateTableDataSource("iot_data_bas", "pest", "iot_data_bas")
 	datatable.Field = datasource.CreateFieldNonType("DEV_ID", "ITEM_ID", "SITE_ID", "DATA_VALUE", "COLLECT_DATE")
@@ -81,7 +96,7 @@ func TestCompositeDataSource(t *testing.T) {
 	fmt.Println(theTime)
 	fmt.Println(timestamp1)
 
-	datatable.AddCriteria("batch_time", datasource.OPER_EQ, timestamp1) //.AndCriteria("dev_id", OPER_EQ, 320503092)
+	datatable.AddCriteria("batch_time", datasource.OPER_EQ, timestamp1)
 	rs, _ := datatable.DoFilter()
 	//rs,_=monitemtable.GetAllData()
 	printRS(rs)

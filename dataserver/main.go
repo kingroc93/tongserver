@@ -1,11 +1,6 @@
 package main
 
 import (
-	"awesome/datasource"
-	"awesome/mgr"
-	_ "awesome/mgr"
-	_ "awesome/routers"
-	_ "awesome/service"
 	"encoding/json"
 	"fmt"
 	"github.com/astaxie/beego"
@@ -15,6 +10,11 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/satori/go.uuid"
 	"strings"
+	"tongserver.dataserver/datasource"
+	"tongserver.dataserver/mgr"
+	_ "tongserver.dataserver/mgr"
+	_ "tongserver.dataserver/routers"
+	_ "tongserver.dataserver/service"
 	//	_ "github.com/mattn/go-oci8"
 )
 
@@ -30,9 +30,7 @@ func reloadDBUrl() error {
 		username := row[rs.Fields["USERNAME"].Index].(string)
 		pwd := row[rs.Fields["PWD"].Index].(string)
 		alias := row[rs.Fields["DBALIAS"].Index].(string)
-
 		if dbtype == datasource.DBType_MySQL {
-
 			dburl := row[rs.Fields["DBURL"].Index].(string)
 			logs.Info("\t%s  user:%s", dburl, username)
 			dburl = strings.ReplaceAll(dburl, "{username}", username)
@@ -54,7 +52,6 @@ func createDefaultDataIDs() error {
 		"dbalias":   "default",
 		"tablename": "G_META"}
 	datasource.IDSContainer[meta["name"].(string)] = meta
-
 	meta = map[string]interface{}{
 		"name":      "default.mgr.G_META_ITEM",
 		"inf":       "CreateTableDataSource",
@@ -107,7 +104,11 @@ func main() {
 	createDefaultDataIDs()
 	mgr.AddMetaFuns(reloadDBUrl)
 	mgr.AddMetaFuns(reloadIds)
-
+	err := mgr.ReloadMetaData()
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
 	beego.InsertFilter("*", beego.BeforeRouter, cors.Allow(&cors.Options{
 		AllowOrigins:     []string{"http://localhost:8080"},
 		AllowMethods:     []string{"PUT", "PATCH", "GET", "POST", "OPTIONS"},

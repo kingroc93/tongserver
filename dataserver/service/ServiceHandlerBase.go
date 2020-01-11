@@ -1,11 +1,11 @@
 package service
 
 import (
-	"awesome/datasource"
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/orm"
 	"strconv"
 	"time"
+	"tongserver.dataserver/datasource"
 )
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -46,14 +46,15 @@ func HasRightService(user string, serviceid string) (bool, error) {
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 func (c *ServiceHandlerBase) createErrorResponse(msg string) {
-	CreateErrorResponse(msg,c.Ctl)
+	CreateErrorResponse(msg, c.Ctl)
 }
 func (c *ServiceHandlerBase) createErrorResponseByError(err error) {
-	CreateErrorResponseByError(err,c.Ctl)
+	CreateErrorResponseByError(err, c.Ctl)
 }
 func (c *ServiceHandlerBase) createErrorResult(msg string) {
-	CreateErrorResult(msg,c.Ctl)
+	CreateErrorResponse(msg, c.Ctl)
 }
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 func (c *ServiceHandlerBase) setResult(msg string) {
 	r := CreateRestResult(true)
@@ -69,8 +70,6 @@ func (c *ServiceHandlerBase) setResultSet(ds *datasource.DataResultSet) {
 	}
 	c.Ctl.Data["json"] = r
 }
-
-
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 func (c *ServiceHandlerBase) ServeJson() {

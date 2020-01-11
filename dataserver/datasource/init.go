@@ -93,12 +93,21 @@ func GetDataSourceTypeStr(t DataSourceType) string {
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 const (
-	Property_Datatype_INT  string = "INT"
-	Property_Datatype_DOU  string = "DOUBLE"
-	Property_Datatype_STR  string = "STRING"
+	//整数
+	Property_Datatype_INT string = "INT"
+	//浮点数
+	Property_Datatype_DOU string = "DOUBLE"
+	//字符串
+	Property_Datatype_STR string = "STRING"
+	//日期
 	Property_Datatype_DATE string = "DATE"
+	//时间
 	Property_Datatype_TIME string = "TIME"
+	//枚举类型
 	Property_Datatype_ENUM string = "ENUM"
+	//数据集，表示该数据数值是一个数据集
+	Property_Datatype_DS string = "DATASET"
+	//未知类型
 	Property_Datatype_UNKN string = ""
 )
 
@@ -139,17 +148,17 @@ type FieldDesc struct {
 	FieldType string
 	Index     int
 	//字段元数据，默认由PostAction中的配置信息为fieldmeta的处理程序填充
-	Meta      *map[string]string
+	Meta *map[string]string
 }
 
-type FieldDescType  map[string]*FieldDesc
+type FieldDescType map[string]*FieldDesc
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 type DataResultSet struct {
 	Fields FieldDescType
 	Data   [][]interface{}
 	//ResultSet的元数据
-	Meta   string
+	Meta string
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -157,11 +166,10 @@ type paramAddInterface interface {
 	AddParamValue(obj interface{}) paramAddInterface
 }
 
-
-func (f FieldDescType) Copy() FieldDescType{
-	r:=make(FieldDescType)
-	for k,v :=range f{
-		r[k]=v
+func (f FieldDescType) Copy() FieldDescType {
+	r := make(FieldDescType)
+	for k, v := range f {
+		r[k] = v
 	}
 	return r
 }

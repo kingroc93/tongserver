@@ -2,14 +2,14 @@ package mgr
 
 import "C"
 import (
-	"awesome/service"
-	"awesome/utils"
 	"encoding/json"
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/orm"
 	"github.com/rs/xid"
 	"strings"
 	"time"
+	"tongserver.dataserver/service"
+	"tongserver.dataserver/utils"
 )
 
 const HASHSECRET = "1@3wq,klahjaqwweq"

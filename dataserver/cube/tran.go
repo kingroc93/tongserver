@@ -1,9 +1,9 @@
 package cube
 
 import (
-	"awesome/datasource"
 	"fmt"
 	"time"
+	"tongserver.dataserver/datasource"
 )
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -166,7 +166,7 @@ func Slice(dataset *datasource.DataResultSet, xfieldname string, yfieldnames []s
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //数据集分组
-func GroupField(data *datasource.DataResultSet, fieldname string) map[interface{}](*datasource.DataResultSet) {
+func GroupField(data *datasource.DataResultSet, fieldname string) *datasource.DataResultSet {
 	temp := make(map[interface{}](*datasource.DataResultSet))
 	for _, row := range data.Data {
 		value := row[data.Fields[fieldname].Index]
@@ -176,30 +176,31 @@ func GroupField(data *datasource.DataResultSet, fieldname string) map[interface{
 		list := temp[value]
 		if list == nil {
 			list = &datasource.DataResultSet{}
-			list.Fields=data.Fields.Copy()
+			list.Fields = data.Fields.Copy()
 		}
 		list.Data = append(list.Data, row)
 		temp[value] = list
 	}
-	return temp
+	var result = &datasource.DataResultSet{}
+	result.Fields = make(datasource.FieldDescType)
+	result.Fields[fieldname] = &datasource.FieldDesc{
+		Index:     0,
+		FieldType: datasource.Property_Datatype_STR,
+		Meta:      nil}
+	result.Fields["DATA"] = &datasource.FieldDesc{
+		Index:     1,
+		FieldType: datasource.Property_Datatype_DS,
+		Meta:      nil}
+	result.Data = make([][]interface{}, len(temp), len(temp))
+	i := 0
+	for k, v := range temp {
+		result.Data[i] = make([]interface{}, 2, 2)
+		result.Data[i][0] = k
+		result.Data[i][1] = v
+		i++
+	}
+	return result
 }
-
-//func GroupField(data *DataSource.DataResultSet, fieldname string) map[interface{}]([][]interface{}) {
-//	temp := make(map[interface{}][][]interface{})
-//	for _, row := range data.Data {
-//		value := row[data.Fields[fieldname].Index]
-//		if value == nil {
-//			continue
-//		}
-//		list := temp[value]
-//		if list == nil {
-//			list = make([][]interface{}, 0, 10)
-//		}
-//		list = append(list, row)
-//		temp[value] = list
-//	}
-//	return temp
-//}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 提取列

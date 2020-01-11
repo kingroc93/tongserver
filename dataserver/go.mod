@@ -1,4 +1,4 @@
-module awesome
+module tongserver.dataserver
 
 go 1.12
 

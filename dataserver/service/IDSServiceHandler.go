@@ -1,12 +1,12 @@
 package service
 
 import (
-	"awesome/datasource"
-	"awesome/cube"
 	"encoding/json"
 	"fmt"
 	"reflect"
 	"strings"
+	"tongserver.dataserver/cube"
+	"tongserver.dataserver/datasource"
 )
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -294,6 +294,8 @@ func (c *IDSServiceHandler) getMetaID(project string, namespace string, metaname
 	metaid := rs.Data[0][rs.Fields["ID"].Index].(string)
 	return metaid, nil
 }
+
+//数据后处理
 func (c *IDSServiceHandler) doPostAction(dataSet *datasource.DataResultSet, rBody *ServiceRequestBody) (*datasource.DataResultSet, error) {
 	if len(rBody.PostAction) == 0 {
 		return dataSet, nil
@@ -301,6 +303,13 @@ func (c *IDSServiceHandler) doPostAction(dataSet *datasource.DataResultSet, rBod
 	var rdataset = dataSet
 	for _, item := range rBody.PostAction {
 		switch item.Name {
+		//根据字段分组
+		case "fieldgroup":
+			{
+				field := item.Params["field"].(string)
+				cube.GroupField(dataSet, field)
+			}
+		//添加字段的元数据
 		case "fieldmeta":
 			{
 				url := item.Params["metaurl"].(string)
@@ -341,6 +350,7 @@ func (c *IDSServiceHandler) doPostAction(dataSet *datasource.DataResultSet, rBod
 					}
 				}
 			}
+		//数据转置
 		case "slice":
 			{
 				//rss := Slice(rs, "ITEM_ID", []string{"DEV_ID", "SITE_ID","COLLECT_DATE"}, "DATA_VALUE")
@@ -351,6 +361,7 @@ func (c *IDSServiceHandler) doPostAction(dataSet *datasource.DataResultSet, rBod
 				}
 				rdataset = cube.Slice(rdataset, item.Params["xfield"].(string), yf, item.Params["valuefield"].(string))
 			}
+		//按行处理
 		case "bulldozer":
 			{
 				ps := item.Params["bulldozer"].([]interface{})

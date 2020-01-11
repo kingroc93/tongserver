@@ -6,12 +6,13 @@ const (
 	//内连接
 	INNER_JOIN string = "INNER"
 	//左链接
-	LEFT_JOIN  string = "LEFT"
+	LEFT_JOIN string = "LEFT"
 	//右链接
 	RIGHT_JOIN string = "RIGHT"
 	//全链接
-	FULL_JOIN  string = "FULL"
+	FULL_JOIN string = "FULL"
 )
+
 //李磊  63202576 522
 type CompositeDataSourceItem struct {
 	BaseCriteria

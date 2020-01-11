@@ -1,12 +1,12 @@
 package datasource
 
 import (
-	"awesome/utils"
 	"fmt"
 	"github.com/astaxie/beego/logs"
 	"github.com/astaxie/beego/orm"
 	"strings"
 	"time"
+	"tongserver.dataserver/utils"
 )
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -132,6 +132,7 @@ func (c *TableDataSource) GetAllData() (*DataResultSet, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	sql, ps := sqlstr.CreateSelectSQL()
 	return c.querySQLData(sql, ps...)
 }
