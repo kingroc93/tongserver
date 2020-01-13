@@ -108,9 +108,9 @@ func (c *ServiceHandlerBase) ConvertString2Type(value string, vtype string) (int
 		}
 	case datasource.Property_Datatype_STR:
 		return value, nil
+
 	case datasource.Property_Datatype_DATE:
 		{
-
 			theTime, err := time.Parse("2006-01-02", value)
 			if err != nil {
 				return nil, err

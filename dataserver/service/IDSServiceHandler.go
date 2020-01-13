@@ -3,8 +3,11 @@ package service
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/astaxie/beego/logs"
 	"reflect"
+	"strconv"
 	"strings"
+	"time"
 	"tongserver.dataserver/cube"
 	"tongserver.dataserver/datasource"
 )
@@ -226,33 +229,186 @@ func (c *IDSServiceHandler) doAllData(ids datasource.IDataSource, rBody *Service
 		c.ServeJson()
 	}
 }
+func (c *IDSServiceHandler) addOneCriteria(v *CriteriaInRBody, ids datasource.IDataSource) error {
+	f := ids.GetFieldByName(v.Field)
+	if f == nil {
+		return fmt.Errorf("没有找到Criteria中定义的字段名" + v.Field)
+	}
+	value := v.Value
+
+	if f.DataType == datasource.Property_Datatype_TIME || f.DataType == datasource.Property_Datatype_DATE {
+		//对于日期和时间类型的BETWEEN操作
+		if v.Operation == datasource.OPER_BETWEEN {
+			ss := strings.Split(value, ";")
+			if len(ss) != 2 {
+				return fmt.Errorf("BETWEEN 操作的value必须为分号分割的两个数")
+			}
+			err := c.addOneCriteria(&CriteriaInRBody{
+				Field:     v.Field,
+				Operation: datasource.OPER_GT,
+				Value:     ss[0],
+				Relation:  v.Relation}, ids)
+			if err != nil {
+				return err
+			}
+			err = c.addOneCriteria(&CriteriaInRBody{
+				Field:     v.Field,
+				Operation: datasource.OPER_LT,
+				Value:     ss[1],
+				Relation:  datasource.COMP_AND}, ids)
+			return nil
+		}
+
+		switch {
+		case strings.HasPrefix(value, "addday"):
+			{
+				//前N天，lastday:1    lastday:-3
+				ss := strings.Split(value, ":")
+				var days = 0
+				if len(ss) == 1 {
+					days = -1
+				} else {
+					days, _ = strconv.Atoi(ss[1])
+				}
+				if days == 0 {
+					days = -1
+				}
+				pd, _ := time.ParseDuration(strconv.Itoa(days*24) + "h")
+				return c.addOneCriteria(&CriteriaInRBody{
+					Field:     v.Field,
+					Operation: v.Operation,
+					Value:     time.Now().Add(pd).Format("2006-01-02 15:04:05"),
+					Relation:  v.Relation}, ids)
+			}
+		case strings.HasPrefix(value, "addmonth"):
+			{
+				ss := strings.Split(value, ":")
+				var ms = 0
+				if len(ss) == 1 {
+					ms = -1
+				} else {
+					ms, _ = strconv.Atoi(ss[1])
+				}
+				if ms == 0 {
+					ms = -1
+				}
+
+				return c.addOneCriteria(&CriteriaInRBody{
+					Field:     v.Field,
+					Operation: v.Operation,
+					Value:     time.Now().AddDate(0, ms, 0).Format("2006-01-02 15:04:05"),
+					Relation:  v.Relation}, ids)
+			}
+		case strings.HasPrefix(value, "addyear"):
+			{
+				ss := strings.Split(value, ":")
+				var ms = 0
+				if len(ss) == 1 {
+					ms = -1
+				} else {
+					ms, _ = strconv.Atoi(ss[1])
+				}
+				if ms == 0 {
+					ms = -1
+				}
+
+				return c.addOneCriteria(&CriteriaInRBody{
+					Field:     v.Field,
+					Operation: v.Operation,
+					Value:     time.Now().AddDate(0, 0, ms).Format("2006-01-02 15:04:05"),
+					Relation:  v.Relation}, ids)
+			}
+
+		case value == "now":
+			{
+				//预定义当前时刻
+				timeStr := time.Now().Format("2006-01-02 15:04:05")
+				return c.addOneCriteria(&CriteriaInRBody{
+					Field:     v.Field,
+					Operation: v.Operation,
+					Value:     timeStr,
+					Relation:  v.Relation}, ids)
+			}
+		case strings.HasPrefix(value, "thismonth"):
+			{
+				//预定义当月，thismonth后跟时间，如thismonth,08:00:00
+				ss := strings.Split(value, ",")
+				n := time.Now()
+				timeStr := time.Date(n.Year(), n.Month(), 1, 0, 0, 0, 0, n.Location()).Format("2006-01-02")
+				if len(ss) == 1 {
+					timeStr += timeStr + " 00:00:00"
+				} else {
+					timeStr += timeStr + " " + ss[1]
+				}
+				return c.addOneCriteria(&CriteriaInRBody{
+					Field:     v.Field,
+					Operation: v.Operation,
+					Value:     timeStr,
+					Relation:  v.Relation}, ids)
+			}
+		case strings.HasPrefix(value, "thisyear"):
+			{
+				ss := strings.Split(value, ",")
+				n := time.Now()
+				timeStr := time.Date(n.Year(), 1, 1, 0, 0, 0, 0, n.Location()).Format("2006-01-02")
+				if len(ss) == 1 {
+					timeStr += timeStr + " 00:00:00"
+				} else {
+					timeStr += timeStr + " " + ss[1]
+				}
+				return c.addOneCriteria(&CriteriaInRBody{
+					Field:     v.Field,
+					Operation: v.Operation,
+					Value:     timeStr,
+					Relation:  v.Relation}, ids)
+			}
+		case strings.HasPrefix(value, "today"):
+			{
+				//预定义当日时刻，today后跟时间，如today,08:00:00
+				ss := strings.Split(value, ",")
+				timeStr := time.Now().Format("2006-01-02")
+				if len(ss) == 1 {
+					timeStr += timeStr + " 00:00:00"
+				} else {
+					timeStr += timeStr + " " + ss[1]
+				}
+				return c.addOneCriteria(&CriteriaInRBody{
+					Field:     v.Field,
+					Operation: v.Operation,
+					Value:     timeStr,
+					Relation:  v.Relation}, ids)
+			}
+		}
+		logs.Info(v.Field + "  " + v.Operation + " " + v.Value)
+	}
+
+	pv, err := c.ConvertString2Type(value, f.DataType)
+
+	if err != nil {
+		return fmt.Errorf("类型转换错误 " + value + " " + f.DataType + " " + err.Error())
+	}
+	fc, _ := ids.(datasource.IFilterAdder)
+	if strings.ToUpper(v.Relation) == "AND" {
+		fc.AndCriteria(v.Field, v.Operation, pv)
+	}
+	if strings.ToUpper(v.Relation) == "OR" {
+		fc.OrCriteria(v.Field, v.Operation, pv)
+	}
+	return nil
+}
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //根据请求的报文填充Criteria,ids必须实现DataSource.IFilterAdder接口
 func (c *IDSServiceHandler) fillCriteriaFromRbody(ids datasource.IDataSource, rBody *ServiceRequestBody) error {
-	fc, okfc := ids.(datasource.IFilterAdder)
+	_, okfc := ids.(datasource.IFilterAdder)
 	//处理条件
 	if !okfc {
 		return fmt.Errorf("请求的服务没有实现IFilterAdder接口,不能处理Criteria节点")
 	}
-	for i, v := range rBody.Criteria {
-		f := ids.GetFieldByName(v.Field)
-		if f == nil {
-			return fmt.Errorf("没有找到Criteria中定义的字段名" + v.Field)
-		}
-		pv, err := c.ConvertString2Type(v.Value, f.DataType)
+	for _, v := range rBody.Criteria {
+		err := c.addOneCriteria(&v, ids)
 		if err != nil {
-			return fmt.Errorf("类型转换错误 " + v.Value + " " + f.DataType + " " + err.Error())
-		}
-		if i == 0 {
-			fc.AddCriteria(v.Field, v.Operation, pv)
-		} else {
-			if strings.ToUpper(v.Relation) == "AND" {
-				fc.AndCriteria(v.Field, v.Operation, pv)
-			}
-			if strings.ToUpper(v.Relation) == "OR" {
-				fc.OrCriteria(v.Field, v.Operation, pv)
-			}
+			return err
 		}
 	}
 	return nil

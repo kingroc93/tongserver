@@ -10,12 +10,13 @@ import (
 var mu sync.Mutex
 
 const (
-	OPER_EQ    string = "="
-	OPER_NOTEQ string = "<>"
-	OPER_GT    string = ">"
-	OPER_LT    string = "<"
-	OPER_GT_EG string = ">="
-	OPER_LT_EG string = "<="
+	OPER_EQ      string = "="
+	OPER_NOTEQ   string = "<>"
+	OPER_GT      string = ">"
+	OPER_LT      string = "<"
+	OPER_GT_EG   string = ">="
+	OPER_LT_EG   string = "<="
+	OPER_BETWEEN string = "BETWEEN"
 )
 
 const (

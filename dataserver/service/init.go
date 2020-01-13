@@ -16,6 +16,12 @@ type CommonParamsType struct {
 	Name   string
 	Params map[string]interface{}
 }
+type CriteriaInRBody struct {
+	Field     string
+	Operation string
+	Value     string
+	Relation  string
+}
 type ServiceRequestBody struct {
 	//新建
 	Insert map[string]string
@@ -26,12 +32,7 @@ type ServiceRequestBody struct {
 	//操作二次确认
 	OperationConfirm string
 	//条件节点,针对更新、删除、查询操作
-	Criteria []struct {
-		Field     string
-		Operation string
-		Value     string
-		Relation  string
-	}
+	Criteria []CriteriaInRBody
 	// 排序节点，针对查询操作
 	OrderBy string
 	// 内连接节点，针对查询操作
