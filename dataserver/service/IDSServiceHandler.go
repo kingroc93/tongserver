@@ -463,7 +463,7 @@ func (c *IDSServiceHandler) doPostAction(dataSet *datasource.DataResultSet, rBod
 		case "fieldgroup":
 			{
 				field := item.Params["field"].(string)
-				cube.GroupField(dataSet, field)
+				rdataset = cube.GroupField(rdataset, field)
 			}
 		//添加字段的元数据
 		case "fieldmeta":

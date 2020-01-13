@@ -80,9 +80,11 @@ func (c *ServiceHandlerBase) ServeJson() {
 func (c *ServiceHandlerBase) setPageParams(ids datasource.IDataSource) {
 	psi, err := strconv.Atoi(c.Ctl.Input().Get(REQUEST_PARAM_PAGESIZE))
 	pii, err2 := strconv.Atoi(c.Ctl.Input().Get(REQUEST_PARAM_PAGEINDEX))
-	if err == nil && err2 == nil {
+	if err == nil {
 		ids.SetRowsLimit(psi)
-		ids.SetRowsOffset(psi * (pii - 1))
+		if err2 == nil {
+			ids.SetRowsOffset(psi * (pii - 1))
+		}
 	}
 }
 
