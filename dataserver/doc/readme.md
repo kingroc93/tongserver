@@ -331,3 +331,55 @@ type IDataSource interface {
 }
 ```
 
+```json
+{
+	"Criteria": [{
+		"field": "collect_date",
+		"operation": ">",
+		"value": "addmonth:-2",
+		"relation": "and"
+	}],
+	"PostAction": [{
+		"name": "slice",
+		"params": {
+			"xfield": "item_id",
+			"yfield": ["dev_id", "site_id", "collect_date"],
+			"valuefield": "data_value"
+		}
+	}, {
+		"name": "fieldmeta",
+		"params": {
+			"metaurl": "idb.table.iotdata"
+		}
+	}, {
+		"name": "bulldozer",
+		"params": {
+			"bulldozer": [{
+				"name": "FormatDatafunc",
+				"params": {
+					"collect_date": "2006-01-02 15:04"
+				}
+			}, {
+				"name": "DictMappingfunc",
+				"params": {
+					"outfield": "mon_site",
+					"dataKeyField": "site_id",
+					"KeyStringSourceName": "idb.site"
+				}
+			}, {
+				"name": "DictMappingfunc",
+				"params": {
+					"outfield": "site_name",
+					"dataKeyField": "dev_id",
+					"KeyStringSourceName": "idb.dev"
+				}
+			}]
+		}
+	},{
+		"name":"fieldgroup",
+		"params":{
+			"field":"site_id"
+		}
+	}]
+}
+```
