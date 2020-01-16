@@ -204,7 +204,7 @@ func GroupField(data *datasource.DataResultSet, fieldname string) *datasource.Da
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 提取列
-func Row2Colume(dataset *datasource.DataResultSet, fieldsname ...string) *datasource.DataResultSet {
+func Row2Column(dataset *datasource.DataResultSet, fieldsname ...string) *datasource.DataResultSet {
 	if len(fieldsname) == 0 {
 		return dataset
 	}

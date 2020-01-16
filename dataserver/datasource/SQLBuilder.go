@@ -2,6 +2,7 @@ package datasource
 
 import (
 	"fmt"
+	"reflect"
 	"strconv"
 	"strings"
 	"sync"
@@ -17,13 +18,13 @@ const (
 	OPER_GT_EG   string = ">="
 	OPER_LT_EG   string = "<="
 	OPER_BETWEEN string = "BETWEEN"
+	OPER_IN      string = "in"
 )
 
 const (
 	COMP_AND  string = "and"
 	COMP_OR   string = "or"
 	COMP_NOT  string = "not"
-	COMP_IN   string = "in"
 	COMP_NONE string = ""
 )
 
@@ -146,16 +147,62 @@ func (c *MySQLSQLBuileder) AddCriteria(field, operation, complex string, value i
 
 func (c *MySQLSQLBuileder) createWhereSubStr() (string, []interface{}) {
 	var sqlwhere string
-	param := make([]interface{}, len(c.criteria))
-	for index, cr := range c.criteria {
-		param[index] = cr.Value
-		if index != 0 {
+	param := make([]interface{}, 0, len(c.criteria))
+
+	for i, cr := range c.criteria {
+
+		var exp string
+		switch cr.Operation {
+		case OPER_BETWEEN:
+			{
+				switch reflect.TypeOf(cr.Value).Kind() {
+				case reflect.Slice, reflect.Array:
+					s := reflect.ValueOf(cr.Value)
+					if s.Len() != 2 {
+						panic("the BETWEEN operation in SQLBuilder the params must be array or slice, and length must be 2")
+					}
+					param = append(param, s.Index(0).Interface(), s.Index(1).Interface())
+					exp = fmt.Sprint(c.tableName, ".", cr.PropertyName, " BETWEEN ? and ?")
+				default:
+					{
+						panic("the BETWEEN operation in SQLBuilder the params must be array or slice, and length must be 2")
+					}
+				}
+			}
+		case OPER_IN:
+			{
+				switch reflect.TypeOf(cr.Value).Kind() {
+				case reflect.Slice, reflect.Array:
+					s := reflect.ValueOf(cr.Value)
+					ins := ""
+					for si := 0; si < s.Len(); si++ {
+						ins = ins + "?,"
+						param = append(param, s.Index(si).Interface())
+					}
+					ins = strings.TrimRight(ins, ",")
+					exp = fmt.Sprint(c.tableName, ".", cr.PropertyName, " in (", ins, ")")
+				default:
+					{
+						exp = fmt.Sprint(c.tableName, ".", cr.PropertyName, " in (?)")
+						param = append(param, cr.Value)
+					}
+				}
+			}
+		default:
+			{
+				exp = fmt.Sprint(c.tableName, ".", cr.PropertyName, cr.Operation, "?")
+				param = append(param, cr.Value)
+			}
+		}
+
+		if i != 0 {
 			if cr.Complex == COMP_AND || cr.Complex == COMP_OR {
-				sqlwhere = fmt.Sprint(sqlwhere, " ", cr.Complex, " ", c.tableName, ".", cr.PropertyName, cr.Operation, "?")
+				sqlwhere = fmt.Sprint(sqlwhere, " ", cr.Complex, " ", exp)
 			}
 		} else {
-			sqlwhere = fmt.Sprint(sqlwhere, " ", c.tableName, ".", cr.PropertyName, cr.Operation, "?")
+			sqlwhere = fmt.Sprint(sqlwhere, " ", exp)
 		}
+
 	}
 	//sql += " WHERE " + sqlwhere
 	return " WHERE " + sqlwhere, param
@@ -265,19 +312,9 @@ func (c *MySQLSQLBuileder) CreateSelectSQL() (string, []interface{}) {
 		sql += " FROM (" + c.objectTable + ") as " + c.tableName
 	}
 	if c.criteria != nil {
-		var sqlwhere string
-		param = make([]interface{}, len(c.criteria))
-		for index, cr := range c.criteria {
-			param[index] = cr.Value
-			if index != 0 {
-				if cr.Complex == COMP_AND || cr.Complex == COMP_OR {
-					sqlwhere = fmt.Sprint(sqlwhere, " ", cr.Complex, " ", c.tableName, ".", cr.PropertyName, cr.Operation, "?")
-				}
-			} else {
-				sqlwhere = fmt.Sprint(sqlwhere, " ", c.tableName, ".", cr.PropertyName, cr.Operation, "?")
-			}
-		}
-		sql += " WHERE " + sqlwhere
+		where, ps := c.createWhereSubStr()
+		sql += where
+		param = append(param, ps...)
 	}
 
 	if len(groupFields) != 0 {

@@ -67,7 +67,7 @@ func TestDictMapping(t *testing.T) {
 		})
 
 	}
-	data = Row2Colume(data, "USER_ID", "USER_NAME", "ORG_NAME")
+	data = Row2Column(data, "USER_ID", "USER_NAME", "ORG_NAME")
 	printRS(data)
 }
 func TestGroupField(t *testing.T) {

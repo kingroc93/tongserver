@@ -19,7 +19,7 @@ type CommonParamsType struct {
 type CriteriaInRBody struct {
 	Field     string
 	Operation string
-	Value     string
+	Value     interface{}
 	Relation  string
 }
 type ServiceRequestBody struct {

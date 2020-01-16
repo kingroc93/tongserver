@@ -62,6 +62,8 @@ func (c *ServiceHandlerBase) setResult(msg string) {
 	c.Ctl.Data["json"] = r
 }
 func (c *ServiceHandlerBase) setResultSet(ds *datasource.DataResultSet) {
+	// TODO 在这里添加处理cache请求的代码
+
 	r := CreateRestResult(true)
 	if c.Ctl.Input().Get(REQUEST_PARAM_NOFIELDSINFO) != "" {
 		r["data"] = ds.Data

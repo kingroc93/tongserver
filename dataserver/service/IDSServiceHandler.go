@@ -3,7 +3,6 @@ package service
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/astaxie/beego/logs"
 	"reflect"
 	"strconv"
 	"strings"
@@ -40,6 +39,9 @@ const (
 	REQUEST_PARAM_NOFIELDSINFO string = "_nofield"
 	//当前请求不执行而是只返回SQL语句，仅针对IDS类型的服务有效
 	REQUEST_PARAM_SQL string = "_sql"
+	//当前请求的响应信息不直接返回，而是保存在cache中，其值可以是1s，2s等秒数，也可以是1t，2t获取的次数
+	//该参数只对query、all两个操作起作用
+	REQUEST_PARAM_CACHE string = "_cache"
 )
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -229,36 +231,9 @@ func (c *IDSServiceHandler) doAllData(ids datasource.IDataSource, rBody *Service
 		c.ServeJson()
 	}
 }
-func (c *IDSServiceHandler) addOneCriteria(v *CriteriaInRBody, ids datasource.IDataSource) error {
-	f := ids.GetFieldByName(v.Field)
-	if f == nil {
-		return fmt.Errorf("没有找到Criteria中定义的字段名" + v.Field)
-	}
-	value := v.Value
-
-	if f.DataType == datasource.Property_Datatype_TIME || f.DataType == datasource.Property_Datatype_DATE {
-		//对于日期和时间类型的BETWEEN操作
-		if v.Operation == datasource.OPER_BETWEEN {
-			ss := strings.Split(value, ";")
-			if len(ss) != 2 {
-				return fmt.Errorf("BETWEEN 操作的value必须为分号分割的两个数")
-			}
-			err := c.addOneCriteria(&CriteriaInRBody{
-				Field:     v.Field,
-				Operation: datasource.OPER_GT,
-				Value:     ss[0],
-				Relation:  v.Relation}, ids)
-			if err != nil {
-				return err
-			}
-			err = c.addOneCriteria(&CriteriaInRBody{
-				Field:     v.Field,
-				Operation: datasource.OPER_LT,
-				Value:     ss[1],
-				Relation:  datasource.COMP_AND}, ids)
-			return nil
-		}
-
+func (c *IDSServiceHandler) convertParamValues(value string, datatype string) (interface{}, error) {
+	//特殊处理日期类型
+	if datatype == datasource.Property_Datatype_TIME || datatype == datasource.Property_Datatype_DATE {
 		switch {
 		case strings.HasPrefix(value, "addday"):
 			{
@@ -274,11 +249,8 @@ func (c *IDSServiceHandler) addOneCriteria(v *CriteriaInRBody, ids datasource.ID
 					days = -1
 				}
 				pd, _ := time.ParseDuration(strconv.Itoa(days*24) + "h")
-				return c.addOneCriteria(&CriteriaInRBody{
-					Field:     v.Field,
-					Operation: v.Operation,
-					Value:     time.Now().Add(pd).Format("2006-01-02 15:04:05"),
-					Relation:  v.Relation}, ids)
+				return c.convertParamValues(time.Now().Add(pd).Format("2006-01-02 15:04:05"), datatype)
+
 			}
 		case strings.HasPrefix(value, "addmonth"):
 			{
@@ -292,12 +264,7 @@ func (c *IDSServiceHandler) addOneCriteria(v *CriteriaInRBody, ids datasource.ID
 				if ms == 0 {
 					ms = -1
 				}
-
-				return c.addOneCriteria(&CriteriaInRBody{
-					Field:     v.Field,
-					Operation: v.Operation,
-					Value:     time.Now().AddDate(0, ms, 0).Format("2006-01-02 15:04:05"),
-					Relation:  v.Relation}, ids)
+				return c.convertParamValues(time.Now().AddDate(0, ms, 0).Format("2006-01-02 15:04:05"), datatype)
 			}
 		case strings.HasPrefix(value, "addyear"):
 			{
@@ -311,23 +278,12 @@ func (c *IDSServiceHandler) addOneCriteria(v *CriteriaInRBody, ids datasource.ID
 				if ms == 0 {
 					ms = -1
 				}
-
-				return c.addOneCriteria(&CriteriaInRBody{
-					Field:     v.Field,
-					Operation: v.Operation,
-					Value:     time.Now().AddDate(0, 0, ms).Format("2006-01-02 15:04:05"),
-					Relation:  v.Relation}, ids)
+				return c.convertParamValues(time.Now().AddDate(0, 0, ms).Format("2006-01-02 15:04:05"), datatype)
 			}
-
 		case value == "now":
 			{
 				//预定义当前时刻
-				timeStr := time.Now().Format("2006-01-02 15:04:05")
-				return c.addOneCriteria(&CriteriaInRBody{
-					Field:     v.Field,
-					Operation: v.Operation,
-					Value:     timeStr,
-					Relation:  v.Relation}, ids)
+				return c.convertParamValues(time.Now().Format("2006-01-02 15:04:05"), datatype)
 			}
 		case strings.HasPrefix(value, "thismonth"):
 			{
@@ -340,11 +296,7 @@ func (c *IDSServiceHandler) addOneCriteria(v *CriteriaInRBody, ids datasource.ID
 				} else {
 					timeStr += timeStr + " " + ss[1]
 				}
-				return c.addOneCriteria(&CriteriaInRBody{
-					Field:     v.Field,
-					Operation: v.Operation,
-					Value:     timeStr,
-					Relation:  v.Relation}, ids)
+				return c.convertParamValues(timeStr, datatype)
 			}
 		case strings.HasPrefix(value, "thisyear"):
 			{
@@ -356,11 +308,7 @@ func (c *IDSServiceHandler) addOneCriteria(v *CriteriaInRBody, ids datasource.ID
 				} else {
 					timeStr += timeStr + " " + ss[1]
 				}
-				return c.addOneCriteria(&CriteriaInRBody{
-					Field:     v.Field,
-					Operation: v.Operation,
-					Value:     timeStr,
-					Relation:  v.Relation}, ids)
+				return c.convertParamValues(timeStr, datatype)
 			}
 		case strings.HasPrefix(value, "today"):
 			{
@@ -372,21 +320,46 @@ func (c *IDSServiceHandler) addOneCriteria(v *CriteriaInRBody, ids datasource.ID
 				} else {
 					timeStr += timeStr + " " + ss[1]
 				}
-				return c.addOneCriteria(&CriteriaInRBody{
-					Field:     v.Field,
-					Operation: v.Operation,
-					Value:     timeStr,
-					Relation:  v.Relation}, ids)
+				return c.convertParamValues(timeStr, datatype)
 			}
 		}
-		logs.Info(v.Field + "  " + v.Operation + " " + v.Value)
 	}
-
-	pv, err := c.ConvertString2Type(value, f.DataType)
-
+	pv, err := c.ConvertString2Type(value, datatype)
 	if err != nil {
-		return fmt.Errorf("类型转换错误 " + value + " " + f.DataType + " " + err.Error())
+		return nil, fmt.Errorf("类型转换错误 " + value + " " + datatype + " " + err.Error())
 	}
+	return pv, nil
+}
+func (c *IDSServiceHandler) addOneCriteria(v *CriteriaInRBody, ids datasource.IDataSource) error {
+	f := ids.GetFieldByName(v.Field)
+	if f == nil {
+		return fmt.Errorf("没有找到Criteria中定义的字段名" + v.Field)
+	}
+	var pv interface{}
+	switch reflect.TypeOf(v.Value).Kind() {
+	case reflect.Slice, reflect.Array:
+		{
+			s := reflect.ValueOf(v.Value)
+			pvs := make([]interface{}, s.Len(), s.Len())
+			for i := 0; i < s.Len(); i++ {
+				var e error
+				pvs[i], e = c.convertParamValues(s.Index(i).Interface().(string), f.DataType)
+				if e != nil {
+					return e
+				}
+			}
+			pv = pvs
+		}
+	default:
+		{
+			p, err := c.convertParamValues(v.Value.(string), f.DataType)
+			if err != nil {
+				return err
+			}
+			pv = p
+		}
+	}
+
 	fc, _ := ids.(datasource.IFilterAdder)
 	if strings.ToUpper(v.Relation) == "AND" {
 		fc.AndCriteria(v.Field, v.Operation, pv)
@@ -464,6 +437,12 @@ func (c *IDSServiceHandler) doPostAction(dataSet *datasource.DataResultSet, rBod
 			{
 				field := item.Params["field"].(string)
 				rdataset = cube.GroupField(rdataset, field)
+			}
+		//行列转换
+		case "row2column":
+			{
+				fields := strings.Split(item.Params["fields"].(string), ",")
+				rdataset = cube.Row2Column(rdataset, fields...)
 			}
 		//添加字段的元数据
 		case "fieldmeta":
@@ -584,7 +563,7 @@ func (c *IDSServiceHandler) doQuery(ids datasource.IDataSource, rBody *ServiceRe
 				AGG_SUM   int = 2
 				AGG_AVG   int = 3
 				AGG_MAX   int = 4
-				AGG_MIN   int = 5*/
+				AGG_MIN   int = 5  */
 			pred := strings.ToUpper(agg.Predicate)
 			p := 0
 			switch pred {
