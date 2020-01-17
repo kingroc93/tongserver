@@ -148,9 +148,7 @@ func (c *MySQLSQLBuileder) AddCriteria(field, operation, complex string, value i
 func (c *MySQLSQLBuileder) createWhereSubStr() (string, []interface{}) {
 	var sqlwhere string
 	param := make([]interface{}, 0, len(c.criteria))
-
 	for i, cr := range c.criteria {
-
 		var exp string
 		switch cr.Operation {
 		case OPER_BETWEEN:
@@ -194,7 +192,6 @@ func (c *MySQLSQLBuileder) createWhereSubStr() (string, []interface{}) {
 				param = append(param, cr.Value)
 			}
 		}
-
 		if i != 0 {
 			if cr.Complex == COMP_AND || cr.Complex == COMP_OR {
 				sqlwhere = fmt.Sprint(sqlwhere, " ", cr.Complex, " ", exp)
@@ -202,7 +199,6 @@ func (c *MySQLSQLBuileder) createWhereSubStr() (string, []interface{}) {
 		} else {
 			sqlwhere = fmt.Sprint(sqlwhere, " ", exp)
 		}
-
 	}
 	//sql += " WHERE " + sqlwhere
 	return " WHERE " + sqlwhere, param
@@ -337,9 +333,11 @@ func (c *MySQLSQLBuileder) CreateSelectSQL() (string, []interface{}) {
 			sql += o
 		}
 	}
+
 	if c.rowsLimit != 0 {
 		sql += " LIMIT " + strconv.Itoa(c.rowsOffset) + "," + strconv.Itoa(c.rowsLimit)
 	}
+
 	return sql, param
 }
 

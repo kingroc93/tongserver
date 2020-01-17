@@ -259,7 +259,7 @@ type IDataSource interface {
 ### 基础统计图
 
 
-
+ 
 ```json
 {
   "Criteria": [

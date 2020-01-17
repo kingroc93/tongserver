@@ -16,14 +16,15 @@ type PredefineBody struct {
 	Definetype string
 }
 
-func (c *PredefineServiceHandler) DoSrv(metestr string, inf ServiceHandlerInterface) {
+func (c *PredefineServiceHandler) DoSrv(sdef *ServiceDefine, inf ServiceHandlerInterface) {
 	c.predefine = &PredefineBody{}
+	metestr := sdef.Meta
 	err2 := json.Unmarshal([]byte(metestr), c.predefine)
 	if err2 != nil {
 		c.createErrorResponse("meta信息不正确,应为JSON格式")
 		return
 	}
-	c.IDSServiceHandler.DoSrv(metestr, inf)
+	c.IDSServiceHandler.DoSrv(sdef, inf)
 }
 func (c *PredefineServiceHandler) merageRbody(rBody *ServiceRequestBody) *ServiceRequestBody {
 	b := c.predefine.ServiceRequestBody
@@ -74,8 +75,8 @@ func (c *PredefineServiceHandler) getServiceInterface(metestr string) (interface
 	}
 	return nil, fmt.Errorf(c.predefine.Ids)
 }
-func (c *PredefineServiceHandler) doAllData(ids datasource.IDataSource, rBody *ServiceRequestBody) {
-	c.IDSServiceHandler.doQuery(ids, rBody)
+func (c *PredefineServiceHandler) doAllData(sdef *ServiceDefine, ids datasource.IDataSource, rBody *ServiceRequestBody) {
+	c.IDSServiceHandler.doQuery(sdef, ids, rBody)
 }
 
 func (c *PredefineServiceHandler) getActionMap() map[string]SerivceActionHandler {

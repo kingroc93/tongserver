@@ -9,6 +9,7 @@ import (
 	"time"
 	"tongserver.dataserver/cube"
 	"tongserver.dataserver/datasource"
+	"tongserver.dataserver/utils"
 )
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -19,6 +20,8 @@ const (
 	SrvAction_QUERY string = "query"
 	//根据主键返回
 	SrvAction_GET string = "get"
+	//返回缓存
+	SrvAction_CACHE string = "cache"
 	//根据字段值返回
 	SrvAction_BYFIELD string = "byfield"
 	//返回服务元数据
@@ -39,9 +42,10 @@ const (
 	REQUEST_PARAM_NOFIELDSINFO string = "_nofield"
 	//当前请求不执行而是只返回SQL语句，仅针对IDS类型的服务有效
 	REQUEST_PARAM_SQL string = "_sql"
-	//当前请求的响应信息不直接返回，而是保存在cache中，其值可以是1s，2s等秒数，也可以是1t，2t获取的次数
+	//当前请求的响应信息不直接返回
 	//该参数只对query、all两个操作起作用
-	REQUEST_PARAM_CACHE string = "_cache"
+	REQUEST_PARAM_CACHE      string = "_cache"
+	REQUEST_PARAM_CACHEBYKEY string = "_cachekey"
 )
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -130,7 +134,7 @@ func (c *IDSServiceHandler) getVauleMapFromStringMap(svalue map[string]string, i
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 处理删除
-func (c *IDSServiceHandler) doDelete(ids datasource.IDataSource, rBody *ServiceRequestBody) {
+func (c *IDSServiceHandler) doDelete(sdef *ServiceDefine, ids datasource.IDataSource, rBody *ServiceRequestBody) {
 	if inf := c.checkMethodAndWriteableInf(ids); inf != nil {
 		if rBody.Delete != "true" {
 			c.createErrorResponse("报文Delete节点的值必须为true")
@@ -157,7 +161,7 @@ func (c *IDSServiceHandler) doDelete(ids datasource.IDataSource, rBody *ServiceR
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //处理更新
-func (c *IDSServiceHandler) doUpdate(ids datasource.IDataSource, rBody *ServiceRequestBody) {
+func (c *IDSServiceHandler) doUpdate(sdef *ServiceDefine, ids datasource.IDataSource, rBody *ServiceRequestBody) {
 	if inf := c.checkMethodAndWriteableInf(ids); inf != nil {
 		if rBody.Update == nil {
 			c.createErrorResponse("报文没有update节点")
@@ -189,7 +193,7 @@ func (c *IDSServiceHandler) doUpdate(ids datasource.IDataSource, rBody *ServiceR
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 处理添加
-func (c *IDSServiceHandler) doInsert(ids datasource.IDataSource, rBody *ServiceRequestBody) {
+func (c *IDSServiceHandler) doInsert(sdef *ServiceDefine, ids datasource.IDataSource, rBody *ServiceRequestBody) {
 	if inf := c.checkMethodAndWriteableInf(ids); inf != nil {
 		if rBody.Insert == nil {
 			c.createErrorResponse("报文没有insert节点")
@@ -211,7 +215,7 @@ func (c *IDSServiceHandler) doInsert(ids datasource.IDataSource, rBody *ServiceR
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //返回所有数据
-func (c *IDSServiceHandler) doAllData(ids datasource.IDataSource, rBody *ServiceRequestBody) {
+func (c *IDSServiceHandler) doAllData(sdef *ServiceDefine, ids datasource.IDataSource, rBody *ServiceRequestBody) {
 	c.setPageParams(ids)
 	resuleset, err := ids.GetAllData()
 	if err != nil {
@@ -517,10 +521,10 @@ func (c *IDSServiceHandler) doPostAction(dataSet *datasource.DataResultSet, rBod
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//处理查询报文
-func (c *IDSServiceHandler) doQuery(ids datasource.IDataSource, rBody *ServiceRequestBody) {
+// 处理查询报文
+func (c *IDSServiceHandler) doQuery(sdef *ServiceDefine, ids datasource.IDataSource, rBody *ServiceRequestBody) {
 	if rBody == nil {
-		c.doAllData(ids, rBody)
+		c.doAllData(sdef, ids, rBody)
 		return
 	}
 	c.setPageParams(ids)
@@ -600,8 +604,8 @@ func (c *IDSServiceHandler) doQuery(ids datasource.IDataSource, rBody *ServiceRe
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//返回服务元数据
-func (c *IDSServiceHandler) doGetMeta(ids datasource.IDataSource, rBody *ServiceRequestBody) {
+// 返回服务元数据
+func (c *IDSServiceHandler) doGetMeta(sdef *ServiceDefine, ids datasource.IDataSource, rBody *ServiceRequestBody) {
 	r := CreateRestResult(true)
 	r["name"] = ids.GetName()
 	r["type"] = datasource.GetDataSourceTypeStr(ids.GetDataSourceType())
@@ -626,6 +630,61 @@ func (c *IDSServiceHandler) doGetMeta(ids datasource.IDataSource, rBody *Service
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// 返回缓存的结果数据
+func (c *IDSServiceHandler) doGetCache(sdef *ServiceDefine, ids datasource.IDataSource, rBody *ServiceRequestBody) {
+	key := c.Ctl.Input().Get(REQUEST_PARAM_CACHEBYKEY)
+	if key == "" {
+		r := CreateRestResult(false)
+		r["msg"] = REQUEST_PARAM_CACHEBYKEY + "不得为空"
+		c.Ctl.Data["json"] = r
+		c.ServeJson()
+	}
+	obj := utils.DataSetResultCache.Get(key)
+	if obj == nil {
+		r := CreateRestResult(false)
+		r["msg"] = "没有找到请求的缓存信息"
+		c.Ctl.Data["json"] = r
+		c.ServeJson()
+		return
+	}
+	r, ok := obj.(RestResult)
+	if !ok {
+		r := CreateRestResult(false)
+		r["msg"] = "缓存对象类型非法"
+		c.Ctl.Data["json"] = r
+		c.ServeJson()
+		return
+	}
+	times := r["cachetimes"].(int)
+	d := r["duration"].(int)
+	if times > 0 {
+		times = times - 1
+	}
+	if times == 0 {
+		err := utils.DataSetResultCache.Delete(key)
+		if err != nil {
+			r["result"] = false
+			r["msg"] = "删除缓存时发生错误：" + err.Error()
+			c.Ctl.Data["json"] = r
+			return
+		}
+	} else {
+		r["cachetimes"] = times
+		err := utils.DataSetResultCache.Put(key, obj, time.Duration(d)*time.Second)
+		if err != nil {
+			r["result"] = false
+			r["msg"] = "加入缓存时发生错误：" + err.Error()
+			c.Ctl.Data["json"] = r
+			return
+		}
+	}
+	r["result"] = true
+	c.Ctl.Data["json"] = r
+	c.ServeJson()
+
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 返回当前类支持的动作类型,以及动作对应的操作函数
 func (c *IDSServiceHandler) getActionMap() map[string]SerivceActionHandler {
 	return map[string]SerivceActionHandler{
@@ -636,12 +695,13 @@ func (c *IDSServiceHandler) getActionMap() map[string]SerivceActionHandler {
 		SrvAction_INSERT:  c.doInsert,
 		SrvAction_ALLDATA: c.doAllData,
 		SrvAction_GET:     c.doGetValueByKey,
+		SrvAction_CACHE:   c.doGetCache,
 	}
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 根据主键返回数据
-func (c *IDSServiceHandler) doGetValueByKey(ids datasource.IDataSource, rBody *ServiceRequestBody) {
+func (c *IDSServiceHandler) doGetValueByKey(sdef *ServiceDefine, ids datasource.IDataSource, rBody *ServiceRequestBody) {
 	fs := ids.GetKeyFields()
 	params := make([]interface{}, len(fs), len(fs))
 	for i, f := range fs {
@@ -691,8 +751,8 @@ func (c *IDSServiceHandler) getServiceInterface(metestr string) (interface{}, er
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 处理服务请求的入口
-func (c *IDSServiceHandler) DoSrv(metestr string, inf ServiceHandlerInterface) {
-
+func (c *IDSServiceHandler) DoSrv(sdef *ServiceDefine, inf ServiceHandlerInterface) {
+	metestr := sdef.Meta
 	//////////////////////////////////////////////////////////////////////////
 	//调用传入的接口中的方法实现下面的功能,因为需要通过不同的接口实现来实现不同的行为
 	obj, err := inf.getServiceInterface(metestr)
@@ -715,5 +775,5 @@ func (c *IDSServiceHandler) DoSrv(metestr string, inf ServiceHandlerInterface) {
 		c.createErrorResponse("请求的动作当前服务没有实现")
 		return
 	}
-	f(ids, rBody)
+	f(sdef, ids, rBody)
 }

@@ -3,15 +3,18 @@ package service
 import (
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/orm"
+	"github.com/satori/go.uuid"
 	"strconv"
+	"strings"
 	"time"
 	"tongserver.dataserver/datasource"
+	"tongserver.dataserver/utils"
 )
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 type ServiceHandlerInterface interface {
 	//处理服务的方法，在目前的程序中POST和GET请求都会映射到该方法上
-	DoSrv(metestr string, inf ServiceHandlerInterface)
+	DoSrv(sdef *ServiceDefine, inf ServiceHandlerInterface)
 	//返回当前实现支持的动作和动作对应的处理函数
 	getActionMap() map[string]SerivceActionHandler
 	//返回请求报文，GET方法没有报文，只处理POST方法的报文
@@ -23,7 +26,7 @@ type ServiceHandlerInterface interface {
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 //处理请求的方法类型
-type SerivceActionHandler func(ids datasource.IDataSource, rBody *ServiceRequestBody)
+type SerivceActionHandler func(sdef *ServiceDefine, ids datasource.IDataSource, rBody *ServiceRequestBody)
 type ServiceHandlerBase struct {
 	Ctl       *beego.Controller
 	ActionMap map[string]SerivceActionHandler
@@ -61,8 +64,9 @@ func (c *ServiceHandlerBase) setResult(msg string) {
 	r["msg"] = msg
 	c.Ctl.Data["json"] = r
 }
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 func (c *ServiceHandlerBase) setResultSet(ds *datasource.DataResultSet) {
-	// TODO 在这里添加处理cache请求的代码
 
 	r := CreateRestResult(true)
 	if c.Ctl.Input().Get(REQUEST_PARAM_NOFIELDSINFO) != "" {
@@ -70,6 +74,59 @@ func (c *ServiceHandlerBase) setResultSet(ds *datasource.DataResultSet) {
 	} else {
 		r["resultset"] = ds
 	}
+
+	if c.Ctl.Input().Get(REQUEST_PARAM_CACHE) != "" {
+		// 处理缓存请求 [缓存时间]_[最大请求次数]  10_1  缓存的结果集请求一次即删除，
+		// 最长保存10秒钟，“缓存时间”为0时表示使用系统定义的默认缓存时间，为30s
+		// 缓存的结果集随时都有可能消失
+		cs := c.Ctl.Input().Get(REQUEST_PARAM_CACHE)
+		css := strings.Split(cs, "_")
+		if len(css) != 2 {
+			r["result"] = false
+			r["msg"] = "缓存参数" + REQUEST_PARAM_CACHE + "必须为 [缓存时间]_[最大请求次数] 的形式"
+			c.Ctl.Data["json"] = r
+			return
+		}
+		t, ok := strconv.Atoi(css[0])
+		if ok != nil {
+			r["result"] = false
+			r["msg"] = "缓存时间非法"
+			c.Ctl.Data["json"] = r
+			return
+		}
+		t2, ok := strconv.Atoi(css[1])
+		if ok != nil {
+			r["result"] = false
+			r["msg"] = "最大请求次数非法"
+			c.Ctl.Data["json"] = r
+			return
+		}
+		if t < 0 || t2 < 0 {
+			r["result"] = false
+			r["msg"] = "非法的最大请求次数或缓存时间"
+			c.Ctl.Data["json"] = r
+			return
+		}
+
+		keys := uuid.NewV4().String()
+		r["cacheid"] = keys
+		if t == 0 {
+			t = 10
+		}
+		if t2 == 0 {
+			t2 = -1
+		}
+		r["cachetimes"] = t2
+		r["duration"] = t
+		err := utils.DataSetResultCache.Put(keys, r, time.Duration(t)*time.Second)
+		if err != nil {
+			r["result"] = false
+			r["msg"] = "加入缓存时发生错误：" + err.Error()
+			c.Ctl.Data["json"] = r
+			return
+		}
+	}
+
 	c.Ctl.Data["json"] = r
 }
 
