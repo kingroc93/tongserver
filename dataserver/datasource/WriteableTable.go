@@ -4,6 +4,7 @@ type WriteableTableSource struct {
 	TableDataSource
 }
 
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 func (c *WriteableTableSource) Delete() error {
 	sqlb, err := c.createSQLBuilder()
 	if err != nil {
@@ -18,6 +19,7 @@ func (c *WriteableTableSource) Delete() error {
 	return err2
 }
 
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 func (c *WriteableTableSource) Insert(values map[string]interface{}) error {
 	sqlb, err := CreateSQLBuileder(DBAlias2DBTypeContainer[c.DBAlias], c.TableName)
 	if err != nil {
@@ -28,6 +30,7 @@ func (c *WriteableTableSource) Insert(values map[string]interface{}) error {
 	return err2
 }
 
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 func (c *WriteableTableSource) Update(values map[string]interface{}) error {
 	sqlb, err := c.createSQLBuilder()
 	if err != nil {

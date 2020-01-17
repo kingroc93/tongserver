@@ -12,5 +12,5 @@ func init() {
 	//JWT Request
 	beego.Router("/token/verify", &SecurityController{}, "post:VerifyToken")
 	beego.Router("/token/create", &SecurityController{}, "post:CreateToken")
-	beego.Router("/token/refash", &SecurityController{}, "get:RefashToken")
+
 }

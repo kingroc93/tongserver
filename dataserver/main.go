@@ -18,6 +18,7 @@ import (
 	//	_ "github.com/mattn/go-oci8"
 )
 
+// 注册数据源
 func reloadDBUrl() error {
 	ids := datasource.CreateTableDataSource("DBURL", "default", "G_DATABASEURL")
 	rs, err := ids.GetAllData()
@@ -92,6 +93,9 @@ func main() {
 
 	}
 
+	mgr.HASHSECRET = beego.AppConfig.String("jwt.token.hashsecret")
+	mgr.TokenExpire, _ = beego.AppConfig.Int64("jwt.token.expire")
+
 	if dbtype == "mysql" {
 		dburl := username + ":" + pwd + "@tcp(" + beego.AppConfig.String("db.default.ipport") + ")/" + beego.AppConfig.String("db.default.database")
 		err := orm.RegisterDataBase("default", dbtype, dburl, 30)
@@ -116,5 +120,4 @@ func main() {
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true}))
 	beego.Run()
-
 }

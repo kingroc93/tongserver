@@ -20,5 +20,4 @@ func TestEnmuSource(t *testing.T) {
 		return
 	}
 	printRS(rs)
-
 }

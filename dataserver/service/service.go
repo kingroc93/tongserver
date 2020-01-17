@@ -41,6 +41,10 @@ type ServiceDefineContainerType map[string]*ServiceDefine
 
 var ServiceDefineContainer = make(ServiceDefineContainerType)
 
+type createServiceHandlerInterfaceFun func(*beego.Controller) ServiceHandlerInterface
+
+var ServiceHandlerContainer = make(map[string]createServiceHandlerInterfaceFun)
+
 type ServiceController struct {
 	beego.Controller
 }
@@ -97,26 +101,32 @@ func (c *ServiceController) DoSrv() {
 		r["msg"] = err.Error()
 		c.Data["json"] = r
 		c.ServeJSON()
+		return
 	}
-	var handler ServiceHandlerInterface
-	//IDS类型的服务，即使用IDataSource接口作为服务处理器的服务
-	if sdef.ServiceType == SRV_TYPE_IDS {
-		handler = &IDSServiceHandler{
-			ServiceHandlerBase{
-				Ctl: &c.Controller,
-			}}
+	if !sdef.Enabled {
+		r := CreateRestResult(false)
+		r["msg"] = "请求的服务未启用"
+		c.Data["json"] = r
+		c.ServeJSON()
+		return
 	}
-	//IDS服务会通过POST请求某些服务是预定义的处理过程
-	if sdef.ServiceType == SRV_TYPE_PREDEF {
-		handler = &PredefineServiceHandler{
-			IDSServiceHandler: IDSServiceHandler{
-				ServiceHandlerBase{
-					Ctl: &c.Controller,
-				}}}
+	handler, ok := ServiceHandlerContainer[sdef.ServiceType]
+	if !ok {
+		r := CreateRestResult(false)
+		r["msg"] = "没有找到" + sdef.ServiceType + "定义的服务接口处理程序"
+		c.Data["json"] = r
+		c.ServeJSON()
+		return
 	}
-	handler.DoSrv(sdef, handler)
+	h := handler(&c.Controller)
+	h.DoSrv(sdef, h)
 }
 
 func init() {
-
+	ServiceHandlerContainer[SRV_TYPE_IDS] = func(c *beego.Controller) ServiceHandlerInterface {
+		return &IDSServiceHandler{ServiceHandlerBase{Ctl: c}}
+	}
+	ServiceHandlerContainer[SRV_TYPE_PREDEF] = func(c *beego.Controller) ServiceHandlerInterface {
+		return &PredefineServiceHandler{IDSServiceHandler: IDSServiceHandler{ServiceHandlerBase{Ctl: c}}}
+	}
 }

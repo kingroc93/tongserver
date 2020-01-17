@@ -235,6 +235,10 @@ func (c *IDSServiceHandler) doAllData(sdef *ServiceDefine, ids datasource.IDataS
 		c.ServeJson()
 	}
 }
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// 参数转换，将string的参数转换为指定的类型，针对日期类型特殊处理：
+// 如前N天，lastday:1    lastday:-3
 func (c *IDSServiceHandler) convertParamValues(value string, datatype string) (interface{}, error) {
 	//特殊处理日期类型
 	if datatype == datasource.Property_Datatype_TIME || datatype == datasource.Property_Datatype_DATE {
@@ -334,6 +338,9 @@ func (c *IDSServiceHandler) convertParamValues(value string, datatype string) (i
 	}
 	return pv, nil
 }
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// 添加一个查询条件
 func (c *IDSServiceHandler) addOneCriteria(v *CriteriaInRBody, ids datasource.IDataSource) error {
 	f := ids.GetFieldByName(v.Field)
 	if f == nil {
@@ -390,6 +397,9 @@ func (c *IDSServiceHandler) fillCriteriaFromRbody(ids datasource.IDataSource, rB
 	}
 	return nil
 }
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// 根据元数据ID返回元数据结果集
 func (c *IDSServiceHandler) getMetaData(metaid string) (*datasource.DataResultSet, error) {
 	obj, err := datasource.CreateIDSFromName("default.mgr.G_META_ITEM")
 	if err != nil {
@@ -406,6 +416,9 @@ func (c *IDSServiceHandler) getMetaData(metaid string) (*datasource.DataResultSe
 	}
 	return r, nil
 }
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//根据project和namespace返回在数据库中定义的该服务返回数据的的元数据ID
 func (c *IDSServiceHandler) getMetaID(project string, namespace string, metaname string) (string, error) {
 	obj, err := datasource.CreateIDSFromName("default.mgr.G_META")
 	if err != nil {
@@ -607,10 +620,23 @@ func (c *IDSServiceHandler) doQuery(sdef *ServiceDefine, ids datasource.IDataSou
 // 返回服务元数据
 func (c *IDSServiceHandler) doGetMeta(sdef *ServiceDefine, ids datasource.IDataSource, rBody *ServiceRequestBody) {
 	r := CreateRestResult(true)
-	r["name"] = ids.GetName()
-	r["type"] = datasource.GetDataSourceTypeStr(ids.GetDataSourceType())
-	r["keyfields"] = ids.GetKeyFields()
-	r["fields"] = ids.GetFields()
+	sd := make(map[string]interface{})
+	r["servicedefine"] = sd
+	sd["Context"] = sdef.Context
+	sd["BodyType"] = sdef.BodyType
+	sd["ServiceType"] = sdef.ServiceType
+	sd["Namespace"] = sdef.Namespace
+	sd["Enabled"] = sdef.Enabled
+	sd["MsgLog"] = sdef.MsgLog
+	sd["Security"] = sdef.Security
+	meta := make(map[string]interface{})
+	err2 := json.Unmarshal([]byte(sdef.Meta), &meta)
+	if err2 == nil {
+		sd["Meta"] = meta
+	} else {
+		sd["Meta"] = sdef.Meta
+	}
+
 	imp := []string{"IDataSource"}
 	if _, ok := ids.(datasource.ICriteriaDataSource); ok {
 		imp = append(imp, "ICriteriaDataSource")
@@ -624,7 +650,8 @@ func (c *IDSServiceHandler) doGetMeta(sdef *ServiceDefine, ids datasource.IDataS
 	if _, ok := ids.(datasource.IWriteableDataSource); ok {
 		imp = append(imp, "IWriteableDataSource")
 	}
-	r["implemention"] = imp
+	r["ids"] = imp
+
 	c.Ctl.Data["json"] = r
 	c.ServeJson()
 }

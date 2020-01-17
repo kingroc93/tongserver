@@ -6,10 +6,16 @@ import (
 	"tongserver.dataserver/datasource"
 )
 
+// 预定义的服务，可以将请求的报文保存在数据库中，形成预定义的服务4
+// 在调用时无需提交整个报文，可以不提交报文或提交部分报文，系统合并提交的报文和预定的报文
+// 预定义的报文中，针对条件的值value属性可以使用:?作为占位符，通过QueryString传入参数
 type PredefineServiceHandler struct {
 	IDSServiceHandler
+	// 保存预定义的报文信息
 	predefine *PredefineBody
 }
+
+// 预定义的报文结构体
 type PredefineBody struct {
 	ServiceRequestBody
 	Ids        string
@@ -78,9 +84,30 @@ func (c *PredefineServiceHandler) getServiceInterface(metestr string) (interface
 func (c *PredefineServiceHandler) doAllData(sdef *ServiceDefine, ids datasource.IDataSource, rBody *ServiceRequestBody) {
 	c.IDSServiceHandler.doQuery(sdef, ids, rBody)
 }
-
+func (c *PredefineServiceHandler) doGetMeta(sdef *ServiceDefine, ids datasource.IDataSource, rBody *ServiceRequestBody) {
+	r := CreateRestResult(true)
+	sd := make(map[string]interface{})
+	r["servicedefine"] = sd
+	sd["Context"] = sdef.Context
+	sd["BodyType"] = sdef.BodyType
+	sd["ServiceType"] = sdef.ServiceType
+	sd["Namespace"] = sdef.Namespace
+	sd["Enabled"] = sdef.Enabled
+	sd["MsgLog"] = sdef.MsgLog
+	sd["Security"] = sdef.Security
+	meta := make(map[string]interface{})
+	err2 := json.Unmarshal([]byte(sdef.Meta), &meta)
+	if err2 == nil {
+		sd["Meta"] = meta
+	} else {
+		sd["Meta"] = sdef.Meta
+	}
+	c.Ctl.Data["json"] = r
+	c.ServeJson()
+}
 func (c *PredefineServiceHandler) getActionMap() map[string]SerivceActionHandler {
 	m := c.IDSServiceHandler.getActionMap()
 	m[SrvAction_ALLDATA] = c.doAllData
+	m[SrvAction_META] = c.doGetMeta
 	return m
 }

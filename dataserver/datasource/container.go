@@ -59,7 +59,10 @@ func RegisterIDSCreatorFun(name string, f func(p IDSContainerParam) interface{})
 }
 
 func CreateIDSFromName(name string) (interface{}, error) {
-	param := IDSContainer[name]
+	param, ok := IDSContainer[name]
+	if !ok {
+		return nil, fmt.Errorf("没有找到元名称为" + name + "的数据源")
+	}
 	obj := CreateIDSFromParam(param)
 	if obj == nil {
 		return nil, fmt.Errorf(name)
@@ -69,15 +72,4 @@ func CreateIDSFromName(name string) (interface{}, error) {
 
 //初始化
 func init() {
-
-	//IDSContainer["ORG_NAME"] = map[string]string{
-	//	"inf":        "CreateKeyStringFromTableSource",
-	//	"name":       "ORG_NAME",
-	//	"dbalias":    "default",
-	//	"tablename":  "JEDA_ORG",
-	//	"keyfield":   "ORG_ID",
-	//	"valuefield": "ORG_NAME",
-	//	"cached":     "true",
-	//}
-
 }
