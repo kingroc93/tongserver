@@ -198,26 +198,42 @@ type IDataSource interface {
 
   "PostAction":[
   	{
-  		"name":"slice",
+  		"name":"slice", #数据行列转换
   		"params":{
-  			"xfield":"item_id",
-  			"yfield":["dev_id", "site_id","collect_date"],
-  			"valuefield":"data_value"
+  			"xfield":"item_id",   #输出结果集的字段，即将数据集的item_id字段的值作为新数据集的列
+  			"yfield":["dev_id", "site_id","collect_date"],#输出结果集的y轴字段
+  			"valuefield":"data_value"  #输出结果集的数值字段
   		}
   	},{
-  		"name":"fieldmeta",
-  		"params":{"metaurl":"idb.table.iotdata"}
-  	},
-  	{
+  		"name":"fieldmeta", #添加字段元数据
+  		"params":{"metaurl":"idb.table.iotdata"} #元数据的URL
+  	},{
+     		"name":"fieldgroup",
+     		"params":{
+     			"field":"site_id"
+     		}
+     	},{
   		"name":"bulldozer",
   		"params":{
   			"bulldozer":[
 			  	{
-			    	"name":"FormatDatafunc",
-			    	"params":{
-			    		"collect_date": "2006-01-02 15:04"
-			    	}
-			    }]}
+                  "name": "FormatDatafunc",     #字段格式化
+                  "params": {"collect_date": "2006-01-02 15:04"}  #格式化字段，针对时间字段格式化处理
+                }, {
+                	"name": "DictMappingfunc",  #字典映射
+                	"params": {
+                			"outfield": "mon_site", #映射后输出字段
+                			"dataKeyField": "site_id",   #映射的主键字段
+                			"KeyStringSourceName": "idb.site"   #映射的数据源，必须是KeyStringSource
+                		}
+                },
+                     {
+                       "name": "ColumnFilterFunc",   #字段过滤器
+                       "params": {
+                         "show": ["USER_ID", "USER_NAME", "ORG_ID", "USER_CREATED","ORG_NAME"]
+                       }
+                     }
+			  	]}
   	}]
 }
 ```

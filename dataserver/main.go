@@ -12,8 +12,8 @@ import (
 	"strings"
 	"tongserver.dataserver/datasource"
 	"tongserver.dataserver/mgr"
-	_ "tongserver.dataserver/mgr"
 	_ "tongserver.dataserver/routers"
+	"tongserver.dataserver/service"
 	_ "tongserver.dataserver/service"
 	//	_ "github.com/mattn/go-oci8"
 )
@@ -93,8 +93,8 @@ func main() {
 
 	}
 
-	mgr.HASHSECRET = beego.AppConfig.String("jwt.token.hashsecret")
-	mgr.TokenExpire, _ = beego.AppConfig.Int64("jwt.token.expire")
+	service.HASHSECRET = beego.AppConfig.String("jwt.token.hashsecret")
+	service.TokenExpire, _ = beego.AppConfig.Int64("jwt.token.expire")
 
 	if dbtype == "mysql" {
 		dburl := username + ":" + pwd + "@tcp(" + beego.AppConfig.String("db.default.ipport") + ")/" + beego.AppConfig.String("db.default.database")

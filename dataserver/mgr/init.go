@@ -2,6 +2,7 @@ package mgr
 
 import (
 	"github.com/astaxie/beego"
+	"tongserver.dataserver/service"
 )
 
 func init() {
@@ -10,7 +11,6 @@ func init() {
 	//qrcode
 	beego.Router("/qrcode", &QrcodeController{})
 	//JWT Request
-	beego.Router("/token/verify", &SecurityController{}, "post:VerifyToken")
-	beego.Router("/token/create", &SecurityController{}, "post:CreateToken")
-
+	beego.Router("/token/verify", &service.SecurityController{}, "post:VerifyToken")
+	beego.Router("/token/create", &service.SecurityController{}, "post:CreateToken")
 }

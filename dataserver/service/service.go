@@ -5,6 +5,7 @@ import (
 	"github.com/astaxie/beego"
 	"strings"
 	"tongserver.dataserver/datasource"
+	"tongserver.dataserver/utils"
 )
 
 const (
@@ -91,6 +92,7 @@ func (c *ServiceController) reloadSrvMetaFromDatabase(cnt string) (*ServiceDefin
 ////////////////////////////////////////////////////////////////////////////////////////////////
 // 处理请求
 func (c *ServiceController) DoSrv() {
+
 	//获取上下文
 	cnt := c.Ctx.Input.Param(":context")
 	//根据上下文获取服务定义信息
@@ -109,6 +111,24 @@ func (c *ServiceController) DoSrv() {
 		c.Data["json"] = r
 		c.ServeJSON()
 		return
+	}
+	if sdef.Security {
+		// 处理访问控制
+		ok, rs, err := VerifyToken(&c.Controller)
+		if err != nil {
+			r := CreateRestResult(false)
+			r["msg"] = err.Error()
+			c.Data["json"] = r
+			c.ServeJSON()
+		}
+		if !ok {
+			r := CreateRestResult(false)
+			r["msg"] = "access denined"
+			c.Data["json"] = r
+			c.ServeJSON()
+		}
+		js, _ := ConvertJson(rs)
+		c.Ctx.ResponseWriter.Header().Add("token", utils.EncodeURLBase64(js)+"."+utils.GetHmacCode(js, HASHSECRET))
 	}
 	handler, ok := ServiceHandlerContainer[sdef.ServiceType]
 	if !ok {

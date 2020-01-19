@@ -789,7 +789,6 @@ func (c *IDSServiceHandler) DoSrv(sdef *ServiceDefine, inf ServiceHandlerInterfa
 	}
 	rBody := inf.getRBody()
 	//////////////////////////////////////////////////////////////////////////
-
 	ids, ok := obj.(datasource.IDataSource)
 	if !ok {
 		c.createErrorResponse("请求的服务没有实现IDataSource接口")

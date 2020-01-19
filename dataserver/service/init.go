@@ -50,6 +50,7 @@ type ServiceRequestBody struct {
 }
 
 func init() {
+	// 所有服务请求的入口函数
 	beego.Router("/services/?:context/?:action", &ServiceController{}, "get,post:DoSrv")
 
 }
