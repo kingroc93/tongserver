@@ -4,24 +4,31 @@ import (
 	"github.com/astaxie/beego"
 )
 
+// 请求返回的数据类型
 type RestResult map[string]interface{}
 
+// 创建返回数据实例
 func CreateRestResult(success bool) RestResult {
 	var result = make(RestResult)
 	result["result"] = success
 	return result
 }
 
+// 请求的通用参数
 type CommonParamsType struct {
 	Name   string
 	Params map[string]interface{}
 }
+
+// 请求的rbody中的查询条件
 type CriteriaInRBody struct {
 	Field     string
 	Operation string
 	Value     interface{}
 	Relation  string
 }
+
+// 请求报文体
 type ServiceRequestBody struct {
 	//新建
 	Insert map[string]string

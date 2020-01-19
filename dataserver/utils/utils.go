@@ -12,11 +12,13 @@ const (
 	formatDateTime = "2006-01-02 15:04:05"
 )
 
+// 可变长数组
 type ArrayList struct {
 	elements []interface{}
 	size     int
 }
 
+// 新建
 func New(values ...interface{}) *ArrayList {
 	list := &ArrayList{}
 	list.elements = make([]interface{}, 10)
@@ -26,6 +28,7 @@ func New(values ...interface{}) *ArrayList {
 	return list
 }
 
+// 添加元素
 func (list *ArrayList) Add(values ...interface{}) {
 	if list.size+len(values) >= len(list.elements)-1 {
 		newElements := make([]interface{}, list.size+len(values)+1)
@@ -39,6 +42,7 @@ func (list *ArrayList) Add(values ...interface{}) {
 	}
 }
 
+// 用于转换的字符串类型
 type String string
 
 // Set string
@@ -152,14 +156,17 @@ func (f String) Uint64() (uint64, error) {
 	return v, err
 }
 
+// 日期
 func (f String) DateTime(format ...string) (time.Time, error) {
 	return f.Date(formatDateTime)
 }
 
+// 时间
 func (f String) Time(format ...string) (time.Time, error) {
 	return f.Date(formatTime)
 }
 
+// 日期
 func (f String) Date(format ...string) (time.Time, error) {
 	var ft string
 	if len(format) == 0 {
@@ -179,6 +186,7 @@ func (f String) String() string {
 	return ""
 }
 
+// 删除元素
 func (list *ArrayList) Remove(index int) interface{} {
 	if index < 0 || index >= list.size {
 		return nil
@@ -191,6 +199,7 @@ func (list *ArrayList) Remove(index int) interface{} {
 	return curEle
 }
 
+// 返回元素
 func (list *ArrayList) Get(index int) interface{} {
 	if index < 0 || index >= list.size {
 		return nil
@@ -198,13 +207,17 @@ func (list *ArrayList) Get(index int) interface{} {
 	return list.elements[index]
 }
 
+// 是否为空
 func (list *ArrayList) IsEmpty() bool {
 	return list.size == 0
 }
 
+// 返回ArrayList的大小
 func (list *ArrayList) Size() int {
 	return list.size
 }
+
+// 判断是否包含该元素
 func (list *ArrayList) Contains(value interface{}) (bool, int) {
 	for index, curValue := range list.elements {
 		if curValue == value {

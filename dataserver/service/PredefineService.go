@@ -107,7 +107,7 @@ func (c *PredefineServiceHandler) doGetMeta(sdef *ServiceDefine, ids datasource.
 }
 func (c *PredefineServiceHandler) getActionMap() map[string]SerivceActionHandler {
 	m := c.IDSServiceHandler.getActionMap()
-	m[SrvAction_ALLDATA] = c.doAllData
-	m[SrvAction_META] = c.doGetMeta
+	m[SrvActionALLDATA] = c.doAllData
+	m[SrvActionMETA] = c.doGetMeta
 	return m
 }

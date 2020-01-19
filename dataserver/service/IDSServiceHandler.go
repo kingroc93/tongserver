@@ -15,23 +15,23 @@ import (
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 const (
 	//返回全部数据
-	SrvAction_ALLDATA string = "all"
+	SrvActionALLDATA string = "all"
 	//查询动作
-	SrvAction_QUERY string = "query"
+	SrvActionQUERY string = "query"
 	//根据主键返回
-	SrvAction_GET string = "get"
+	SrvActionGET string = "get"
 	//返回缓存
-	SrvAction_CACHE string = "cache"
+	SrvActionCACHE string = "cache"
 	//根据字段值返回
-	SrvAction_BYFIELD string = "byfield"
+	SrvActionBYFIELD string = "byfield"
 	//返回服务元数据
-	SrvAction_META string = "meta"
+	SrvActionMETA string = "meta"
 	//删除操作
-	SrvAction_DELETE string = "delete"
+	SrvActionDELETE string = "delete"
 	//更新操作
-	SrvAction_UPDATE string = "update"
+	SrvActionUPDATE string = "update"
 	//插入操作
-	SrvAction_INSERT string = "insert"
+	SrvActionINSERT string = "insert"
 
 	//以下三个常量均为通过QueryString传入的参数名
 	//针对查询自动分页中每页记录数
@@ -715,14 +715,14 @@ func (c *IDSServiceHandler) doGetCache(sdef *ServiceDefine, ids datasource.IData
 // 返回当前类支持的动作类型,以及动作对应的操作函数
 func (c *IDSServiceHandler) getActionMap() map[string]SerivceActionHandler {
 	return map[string]SerivceActionHandler{
-		SrvAction_META:    c.doGetMeta,
-		SrvAction_QUERY:   c.doQuery,
-		SrvAction_DELETE:  c.doDelete,
-		SrvAction_UPDATE:  c.doUpdate,
-		SrvAction_INSERT:  c.doInsert,
-		SrvAction_ALLDATA: c.doAllData,
-		SrvAction_GET:     c.doGetValueByKey,
-		SrvAction_CACHE:   c.doGetCache,
+		SrvActionMETA:    c.doGetMeta,
+		SrvActionQUERY:   c.doQuery,
+		SrvActionDELETE:  c.doDelete,
+		SrvActionUPDATE:  c.doUpdate,
+		SrvActionINSERT:  c.doInsert,
+		SrvActionALLDATA: c.doAllData,
+		SrvActionGET:     c.doGetValueByKey,
+		SrvActionCACHE:   c.doGetCache,
 	}
 }
 
