@@ -11,42 +11,65 @@ import (
 var mu sync.Mutex
 
 const (
-	OPER_EQ      string = "="
-	OPER_NOTEQ   string = "<>"
-	OPER_GT      string = ">"
-	OPER_LT      string = "<"
-	OPER_GT_EG   string = ">="
-	OPER_LT_EG   string = "<="
-	OPER_BETWEEN string = "BETWEEN"
-	OPER_IN      string = "in"
+	// 等于
+	OperEq string = "="
+	// 不等于
+	OperNoteq string = "<>"
+	// 大于
+	OperGt string = ">"
+	// 小于
+	OperLt string = "<"
+	// 大于等于
+	OperGtEg string = ">="
+	// 小于等于
+	OperLtEg string = "<="
+	// 介于--之间
+	OperBetween string = "BETWEEN"
+	// 包含
+	OperIn string = "in"
 )
 
 const (
-	COMP_AND  string = "and"
-	COMP_OR   string = "or"
-	COMP_NOT  string = "not"
-	COMP_NONE string = ""
+	// 与
+	CompAnd string = "and"
+	// 或
+	CompOr string = "or"
+	// 非
+	CompNot string = "not"
+	// 未知
+	CompNone string = ""
 )
 
+// SQL查询条件
 type SQLCriteria struct {
 	PropertyName string
 	Operation    string
 	Value        interface{}
 	Complex      string
 }
+
+// 聚合类型
 type AggreType struct {
-	Predicate int    //谓词
-	ColName   string //字段名
+	//谓词
+	Predicate int
+	//字段名
+	ColName string
 }
 
 const (
-	AGG_COUNT int = 1
-	AGG_SUM   int = 2
-	AGG_AVG   int = 3
-	AGG_MAX   int = 4
-	AGG_MIN   int = 5
+	// 计数
+	AggCount int = 1
+	// 求和
+	AggSum int = 2
+	// 求算术平均
+	AggAvg int = 3
+	// 最大值
+	AggMax int = 4
+	// 最小值
+	AggMin int = 5
 )
 
+// SQL构造器接口
 type ISQLBuilder interface {
 	AddCriteria(field, operation, complex string, value interface{}) ISQLBuilder
 	CreateSelectSQL() (string, []interface{})
@@ -58,6 +81,8 @@ type ISQLBuilder interface {
 	ClearCriteria()
 	AddAggre(outfield string, aggreType *AggreType)
 }
+
+// SQL 构造器类
 type SQLBuilder struct {
 	//表名
 	tableName string
@@ -73,10 +98,12 @@ type SQLBuilder struct {
 	aggre      map[string]*AggreType
 }
 
+// MySQl的SQL构造器
 type MySQLSQLBuileder struct {
 	SQLBuilder
 }
 
+// 创建SQL构造器
 func CreateSQLBuileder2(dbType string, tablename string, columns []string, orderby []string, rowslimit int, rowsoffset int) (ISQLBuilder, error) {
 	switch dbType {
 	case DBType_MySQL:
@@ -90,6 +117,8 @@ func CreateSQLBuileder2(dbType string, tablename string, columns []string, order
 	}
 	return nil, fmt.Errorf("不支持的数据库类型" + dbType)
 }
+
+// 创建SQL构造器
 func CreateSQLBuileder(dbType string, tablename string) (ISQLBuilder, error) {
 	switch dbType {
 	case DBType_MySQL:
@@ -100,6 +129,7 @@ func CreateSQLBuileder(dbType string, tablename string) (ISQLBuilder, error) {
 	return nil, fmt.Errorf("不支持的数据库类型" + dbType)
 }
 
+// 返回查询数据库表主键信息的SQL语句
 func (c *MySQLSQLBuileder) CreateKeyFieldsSQL() string {
 	if c.objectTable == "" {
 		sqlstr := "SELECT a.column_name,b.data_type FROM INFORMATION_SCHEMA.`KEY_COLUMN_USAGE` a" +
@@ -111,6 +141,7 @@ func (c *MySQLSQLBuileder) CreateKeyFieldsSQL() string {
 	}
 }
 
+// 返回获取数据库表全部字段的SQL语句
 func (c *MySQLSQLBuileder) CreateGetColsSQL() string {
 	if c.objectTable == "" {
 		return "SELECT column_name,data_type FROM information_schema.columns WHERE table_name='" + c.tableName + "'"
@@ -119,10 +150,12 @@ func (c *MySQLSQLBuileder) CreateGetColsSQL() string {
 	}
 }
 
+// 清楚查询条件
 func (c *MySQLSQLBuileder) ClearCriteria() {
 	c.criteria = nil
 }
 
+// 添加聚合
 func (tc *MySQLSQLBuileder) AddAggre(outfield string, aggreType *AggreType) {
 	if tc.aggre == nil {
 		tc.aggre = make(map[string]*AggreType)
@@ -130,6 +163,7 @@ func (tc *MySQLSQLBuileder) AddAggre(outfield string, aggreType *AggreType) {
 	tc.aggre[outfield] = aggreType
 }
 
+// 删除条件
 func (c *MySQLSQLBuileder) AddCriteria(field, operation, complex string, value interface{}) ISQLBuilder {
 	mu.Lock()
 	if c.criteria == nil {
@@ -145,13 +179,14 @@ func (c *MySQLSQLBuileder) AddCriteria(field, operation, complex string, value i
 	return c
 }
 
+// 创建查询Where语句
 func (c *MySQLSQLBuileder) createWhereSubStr() (string, []interface{}) {
 	var sqlwhere string
 	param := make([]interface{}, 0, len(c.criteria))
 	for i, cr := range c.criteria {
 		var exp string
 		switch cr.Operation {
-		case OPER_BETWEEN:
+		case OperBetween:
 			{
 				switch reflect.TypeOf(cr.Value).Kind() {
 				case reflect.Slice, reflect.Array:
@@ -167,7 +202,7 @@ func (c *MySQLSQLBuileder) createWhereSubStr() (string, []interface{}) {
 					}
 				}
 			}
-		case OPER_IN:
+		case OperIn:
 			{
 				switch reflect.TypeOf(cr.Value).Kind() {
 				case reflect.Slice, reflect.Array:
@@ -193,7 +228,7 @@ func (c *MySQLSQLBuileder) createWhereSubStr() (string, []interface{}) {
 			}
 		}
 		if i != 0 {
-			if cr.Complex == COMP_AND || cr.Complex == COMP_OR {
+			if cr.Complex == CompAnd || cr.Complex == CompOr {
 				sqlwhere = fmt.Sprint(sqlwhere, " ", cr.Complex, " ", exp)
 			}
 		} else {
@@ -203,6 +238,8 @@ func (c *MySQLSQLBuileder) createWhereSubStr() (string, []interface{}) {
 	//sql += " WHERE " + sqlwhere
 	return " WHERE " + sqlwhere, param
 }
+
+// 创建删除数据的SQL语句
 func (c *MySQLSQLBuileder) CreateDeleteSQL() (string, []interface{}) {
 	sql := "DELETE FROM " + c.tableName
 	if c.criteria != nil {
@@ -213,6 +250,8 @@ func (c *MySQLSQLBuileder) CreateDeleteSQL() (string, []interface{}) {
 		return sql, nil
 	}
 }
+
+//
 func (c *MySQLSQLBuileder) CreateUpdateSQL(fieldvalues map[string]interface{}) (string, []interface{}) {
 	sql := "UPDATE " + c.tableName + " SET "
 	params := make([]interface{}, len(fieldvalues), len(fieldvalues))
@@ -275,15 +314,15 @@ func (c *MySQLSQLBuileder) CreateSelectSQL() (string, []interface{}) {
 		for field, aggre := range c.aggre {
 			var p string
 			switch aggre.Predicate {
-			case AGG_COUNT:
+			case AggCount:
 				p = "COUNT("
-			case AGG_AVG:
+			case AggAvg:
 				p = "AVG("
-			case AGG_MAX:
+			case AggMax:
 				p = "MAX("
-			case AGG_MIN:
+			case AggMin:
 				p = "MIN("
-			case AGG_SUM:
+			case AggSum:
 				p = "SUM("
 			}
 			p += c.tableName + "." + aggre.ColName + ") as " + field

@@ -5,14 +5,13 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/hmac"
-	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
-	"encoding/hex"
 	"fmt"
 	"io"
 )
 
+// 加密并返回加密字符串
 func AesEncrypt(orig string, key string) string {
 	// 转成字节数组
 	origData := []byte(orig)
@@ -32,6 +31,8 @@ func AesEncrypt(orig string, key string) string {
 	blockMode.CryptBlocks(cryted, origData)
 	return base64.StdEncoding.EncodeToString(cryted)
 }
+
+// 解密
 func AesDecrypt(cryted string, key string) string {
 	// 转成字节数组
 	crytedByte, _ := base64.StdEncoding.DecodeString(cryted)
@@ -66,6 +67,7 @@ func PKCS7UnPadding(origData []byte) []byte {
 	return origData[:(length - unpadding)]
 }
 
+// 加密
 func AESEncrypt(src []byte, key []byte) (encrypted []byte) {
 	cipher, _ := aes.NewCipher(generateKey(key))
 	length := (len(src) + aes.BlockSize) / aes.BlockSize
@@ -84,6 +86,7 @@ func AESEncrypt(src []byte, key []byte) (encrypted []byte) {
 	return encrypted
 }
 
+// 解密
 func AESDecrypt(encrypted []byte, key []byte) (decrypted []byte) {
 	cipher, _ := aes.NewCipher(generateKey(key))
 	decrypted = make([]byte, len(encrypted))
@@ -111,86 +114,19 @@ func generateKey(key []byte) (genKey []byte) {
 	return genKey
 }
 
-func ExampleNewCFBDecrypter() {
-	// Load your secret key from a safe place and reuse it across multiple
-	// NewCipher calls. (Obviously don't use this example key for anything
-	// real.) If you want to convert a passphrase to a key, use a suitable
-	// package like bcrypt or scrypt.
-	key, _ := hex.DecodeString("6368616e676520746869732070617373")
-	ciphertext, _ := hex.DecodeString("7dd015f06bec7f1b8f6559dad89f4131da62261786845100056b353194ad")
-
-	block, err := aes.NewCipher(key)
-	if err != nil {
-		panic(err)
-	}
-
-	// The IV needs to be unique, but not secure. Therefore it's common to
-	// include it at the beginning of the ciphertext.
-	if len(ciphertext) < aes.BlockSize {
-		panic("ciphertext too short")
-	}
-	iv := ciphertext[:aes.BlockSize]
-	ciphertext = ciphertext[aes.BlockSize:]
-
-	stream := cipher.NewCFBDecrypter(block, iv)
-
-	// XORKeyStream can work in-place if the two arguments are the same.
-	stream.XORKeyStream(ciphertext, ciphertext)
-	fmt.Printf("%s", ciphertext)
-	// Output: some plaintext
-}
-
-func ExampleNewCFBEncrypter() {
-	// Load your secret key from a safe place and reuse it across multiple
-	// NewCipher calls. (Obviously don't use this example key for anything
-	// real.) If you want to convert a passphrase to a key, use a suitable
-	// package like bcrypt or scrypt.
-	key, _ := hex.DecodeString("6368616e676520746869732070617373")
-	plaintext := []byte("some plaintext")
-
-	block, err := aes.NewCipher(key)
-	if err != nil {
-		panic(err)
-	}
-
-	// The IV needs to be unique, but not secure. Therefore it's common to
-	// include it at the beginning of the ciphertext.
-	ciphertext := make([]byte, aes.BlockSize+len(plaintext))
-	iv := ciphertext[:aes.BlockSize]
-	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
-		panic(err)
-	}
-
-	stream := cipher.NewCFBEncrypter(block, iv)
-	stream.XORKeyStream(ciphertext[aes.BlockSize:], plaintext)
-
-	// It's important to remember that ciphertexts must be authenticated
-	// (i.e. by using crypto/hmac) as well as being encrypted in order to
-	// be secure.
-	fmt.Printf("%x\n", ciphertext)
-}
-
-func GetSHA256HashCode(message []byte) string {
-	hash := sha256.New()
-	hash.Write(message)
-	bytes := hash.Sum(nil)
-	hashCode := hex.EncodeToString(bytes)
-	return hashCode
-}
-
+// 返回hash值
 func GetHmacCode(s string, secret string) string {
 	h := hmac.New(sha256.New, []byte(secret))
 	io.WriteString(h, s)
 	return fmt.Sprintf("%x", h.Sum(nil))
 }
 
-func EncodeBase64(input string) string {
-	return base64.StdEncoding.EncodeToString([]byte(input))
-}
-
+// 数据进base64编码
 func EncodeURLBase64(input string) string {
 	return base64.URLEncoding.EncodeToString([]byte(input))
 }
+
+// 数据进base64解码
 func DecodeBase64(input string) string {
 	decodeBytes, err := base64.StdEncoding.DecodeString(input)
 	if err != nil {
@@ -198,6 +134,8 @@ func DecodeBase64(input string) string {
 	}
 	return string(decodeBytes)
 }
+
+// 数据进base64解码
 func DecodeURLBase64(input string) string {
 	decodeBytes, err := base64.URLEncoding.DecodeString(input)
 	if err != nil {

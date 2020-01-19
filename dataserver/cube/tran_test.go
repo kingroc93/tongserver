@@ -96,7 +96,7 @@ func TestCompositeDataSource(t *testing.T) {
 	fmt.Println(theTime)
 	fmt.Println(timestamp1)
 
-	datatable.AddCriteria("batch_time", datasource.OPER_EQ, timestamp1)
+	datatable.AddCriteria("batch_time", datasource.OperEq, timestamp1)
 	rs, _ := datatable.DoFilter()
 	//rs,_=monitemtable.GetAllData()
 	printRS(rs)

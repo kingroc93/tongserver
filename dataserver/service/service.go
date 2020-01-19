@@ -63,10 +63,10 @@ func (c *ServiceController) reloadSrvMetaFromDatabase(cnt string) (*ServiceDefin
 	}
 	ds := datasource.CreateTableDataSource("GSERVICE", "default", "G_SERVICE")
 	if len(ps) == 2 {
-		ds.AddCriteria("NAMESPACE", datasource.OPER_EQ, ps[0]).AndCriteria("CONTEXT", datasource.OPER_EQ, ps[1])
+		ds.AddCriteria("NAMESPACE", datasource.OperEq, ps[0]).AndCriteria("CONTEXT", datasource.OperEq, ps[1])
 	}
 	if len(ps) == 1 {
-		ds.AddCriteria("CONTEXT", datasource.OPER_EQ, ps[0]).AndCriteria("CONTEXT", datasource.OPER_EQ, "")
+		ds.AddCriteria("CONTEXT", datasource.OperEq, ps[0]).AndCriteria("CONTEXT", datasource.OperEq, "")
 	}
 	rs, err := ds.DoFilter()
 	if err != nil {

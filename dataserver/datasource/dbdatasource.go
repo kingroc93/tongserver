@@ -23,6 +23,8 @@ type DBDataSource struct {
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // DataSource
+
+// 初始化
 func (c *DataSource) Init() {
 	panic("")
 }
@@ -43,15 +45,23 @@ func (c *DataSource) convertPropertys2Cols(ps []*MyProperty) []string {
 	}
 	return result
 }
+
+// 返回字段列表
 func (c *DataSource) GetFields() []*MyProperty {
 	return c.Field
 }
+
+// 返回数据源类型
 func (c *DataSource) GetDataSourceType() DataSourceType {
 	panic("")
 }
+
+// 返回数据源名称
 func (c *DataSource) GetName() string {
 	return c.Name
 }
+
+// 根据名称返回主键属性
 func (c *DataSource) GetKeyFieldByName(name string) *MyProperty {
 	for _, v := range c.KeyField {
 		if v.Name == name {
@@ -60,6 +70,8 @@ func (c *DataSource) GetKeyFieldByName(name string) *MyProperty {
 	}
 	return nil
 }
+
+// 根据名称返回字段属性
 func (c *DataSource) GetFieldByName(name string) *MyProperty {
 	for _, v := range c.Field {
 		if v.Name == name {
@@ -68,16 +80,23 @@ func (c *DataSource) GetFieldByName(name string) *MyProperty {
 	}
 	return nil
 }
+
+// 设置返回的数据条数
 func (c *DBDataSource) SetRowsLimit(limit int) {
 	c.RowsLimit = limit
 }
+
+// 设置返回的数据条目偏移量
 func (c *DBDataSource) SetRowsOffset(offset int) {
 	c.RowsOffset = offset
 }
 
+// 返回所有主键字段
 func (c *DBDataSource) GetKeyFields() []*MyProperty {
 	return c.KeyField
 }
+
+// 将DB返回的数据转换为指定类型
 func (c *DBDataSource) convertData(value interface{}, fieldType string) interface{} {
 	var str utils.String
 	switch v := value.(type) {
@@ -118,6 +137,8 @@ func (c *DBDataSource) convertData(value interface{}, fieldType string) interfac
 	}
 	return item
 }
+
+// 返回一条记录
 func (c *DBDataSource) getRecordByRef(refs []interface{}, cols []string, colsTypes *FieldDescType) ([]interface{}, []*MyProperty) {
 	if c.Field == nil || len(c.Field) == 0 || c.palesql {
 		item := make([]interface{}, len(cols), len(cols))
@@ -138,6 +159,8 @@ func (c *DBDataSource) getRecordByRef(refs []interface{}, cols []string, colsTyp
 		return item, Oj
 	}
 }
+
+// 根据SQL语句查询数据
 func (c *DBDataSource) querySQLData(sqlstr string, params ...interface{}) (*DataResultSet, error) {
 	var err error
 	logs.Debug(sqlstr)

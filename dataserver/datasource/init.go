@@ -57,21 +57,30 @@ type IAggregativeAdder interface {
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// 数据源类型
 type DataSourceType int8
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 const (
-	DataSourceType_SQL      DataSourceType = 1
+	// SQL数据源
+	DataSourceType_SQL DataSourceType = 1
+	// 数据库表数据源
 	DataSourceType_SQLTABLE DataSourceType = 2
-	DataSourceType_REST     DataSourceType = 3
-	DataSourceType_ENMU     DataSourceType = 4
-	DataSourceType_INNER    DataSourceType = 5
+	// REST服务数据源
+	DataSourceType_REST DataSourceType = 3
+	// 枚举数据源
+	DataSourceType_ENMU DataSourceType = 4
+	// 联接数据源
+	DataSourceType_INNER DataSourceType = 5
 )
 const (
-	DBType_MySQL  string = "mysql"
+	// MySQL数据库类型
+	DBType_MySQL string = "mysql"
+	// Oracle数据库类型
 	DBType_Oracle string = "oracle"
 )
 
+// 根据数据源类型返回数据源类型的String表达
 func GetDataSourceTypeStr(t DataSourceType) string {
 	switch t {
 	case DataSourceType_SQL:
@@ -111,6 +120,7 @@ const (
 	Property_Datatype_UNKN string = ""
 )
 
+// 联接时使用的输出字段
 type OutFieldProperty struct {
 	Source     IDataSource `json:"-"`
 	JoinField  string
@@ -121,17 +131,18 @@ type OutFieldProperty struct {
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //对象属性
 type MyProperty struct {
-	Name          string //属性名
-	DataType      string //类型名in
-	OutJoin       bool
-	Caption       string //显示名
-	OutJoinDefine *OutFieldProperty
-	Hidden        bool
-}
-
-type DBField struct {
-	Name     string
+	//属性名
+	Name string
+	//类型名in
 	DataType string
+	//是否为联接字段
+	OutJoin bool
+	//显示名
+	Caption string
+	//联接定义
+	OutJoinDefine *OutFieldProperty
+	//是否隐藏,该属性目前没有处理
+	Hidden bool
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -144,6 +155,7 @@ type DataSource struct {
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// 返回结果时用的字段描述
 type FieldDesc struct {
 	FieldType string
 	Index     int
@@ -151,21 +163,22 @@ type FieldDesc struct {
 	Meta *map[string]string
 }
 
+// 字段描述类型
 type FieldDescType map[string]*FieldDesc
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// 返回的结果集
 type DataResultSet struct {
+	// 字段列表
 	Fields FieldDescType
-	Data   [][]interface{}
+	// 二维表数据
+	Data [][]interface{}
 	//ResultSet的元数据
 	Meta string
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
-type paramAddInterface interface {
-	AddParamValue(obj interface{}) paramAddInterface
-}
-
+// 复制FieldDescType
 func (f FieldDescType) Copy() FieldDescType {
 	r := make(FieldDescType)
 	for k, v := range f {
@@ -175,6 +188,7 @@ func (f FieldDescType) Copy() FieldDescType {
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// 类型表达形式转换
 func ConvertMySQLType2CommonType(t string) string {
 	switch t {
 	case "VARCHAR":
@@ -211,12 +225,15 @@ func ConvertMySQLType2CommonType(t string) string {
 	return Property_Datatype_UNKN
 }
 
+// 对比连个数据源是否是一个数据源
 func DataSourceCompare(dsa, dsb *DBDataSource) bool {
 	if dsa == nil && dsb == nil {
 		return false
 	}
 	return dsa.DBAlias == dsb.DBAlias
 }
+
+// 创建可写的数据表数据源
 func CreateWriteableTableDataSource(name, dbAlias, tablename string, fields ...string) *WriteableTableSource {
 	ids := &WriteableTableSource{
 		TableDataSource{
@@ -232,6 +249,8 @@ func CreateWriteableTableDataSource(name, dbAlias, tablename string, fields ...s
 	ids.Init()
 	return ids
 }
+
+// 创建数据表数据源
 func CreateTableDataSource(name, dbAlias, tablename string, fields ...string) *TableDataSource {
 
 	ids := &TableDataSource{
@@ -248,6 +267,7 @@ func CreateTableDataSource(name, dbAlias, tablename string, fields ...string) *T
 	return ids
 }
 
+// 根据数数据组创建一堆字段属性,不设定属性类型
 func CreateFieldNonType(fields ...string) []*MyProperty {
 	temp := make([]*MyProperty, len(fields), len(fields))
 	for i, v := range fields {

@@ -116,9 +116,9 @@ func printRS(rs *DataResultSet) {
 func TestRiverIDS(t *testing.T) {
 	ids := createIDS_river()
 	ids.RowsLimit = 1000
-	ids.AddCriteria("Z", OPER_LT, 5.00)
+	ids.AddCriteria("Z", OperLt, 5.00)
 	ids.AddAggre("CNT", &AggreType{
-		Predicate: AGG_COUNT,
+		Predicate: AggCount,
 		ColName:   "Z",
 	})
 	rs, _ := ids.DoFilter()
@@ -144,7 +144,7 @@ func TestAddCriteria(t *testing.T) {
 	ids := createIDS()
 	//	var inf interface{}
 	//	inf = ids
-	ids.AddCriteria("ORG_ID", OPER_EQ, "001031")
+	ids.AddCriteria("ORG_ID", OperEq, "001031")
 	rs, err := ids.DoFilter()
 	if err != nil {
 		fmt.Print(err)
@@ -170,7 +170,7 @@ func TestAddCriteria(t *testing.T) {
 //		SQL:          "select * from  JEDA_USER where org_id=?",
 //	}
 //	ids.Init()
-//	ids.AddCriteria("USER_ID", OPER_EQ, "ceshiwpj")
+//	ids.AddCriteria("USER_ID", OperEq, "ceshiwpj")
 //	rs, _ := ids.DoFilter()
 //	for _, item := range ids.Field {
 //		fmt.Printf("%s\t%s\n", item.Name, item.DataType)

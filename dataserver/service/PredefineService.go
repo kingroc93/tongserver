@@ -22,6 +22,7 @@ type PredefineBody struct {
 	Definetype string
 }
 
+// 预定义服务处理请求
 func (c *PredefineServiceHandler) DoSrv(sdef *ServiceDefine, inf ServiceHandlerInterface) {
 	c.predefine = &PredefineBody{}
 	metestr := sdef.Meta
@@ -46,6 +47,8 @@ func (c *PredefineServiceHandler) merageRbody(rBody *ServiceRequestBody) *Servic
 	}
 	return rBody
 }
+
+// 返回请求体
 func (c *PredefineServiceHandler) getRBody() *ServiceRequestBody {
 	if c.Ctl.Ctx.Request.Method == "POST" {
 		rBody := &ServiceRequestBody{}
@@ -70,6 +73,8 @@ func (c *PredefineServiceHandler) getRBody() *ServiceRequestBody {
 		return &c.predefine.ServiceRequestBody
 	}
 }
+
+//返回该服务需要的数据源接口
 func (c *PredefineServiceHandler) getServiceInterface(metestr string) (interface{}, error) {
 	if c.predefine.Definetype == "ids" {
 		param := datasource.IDSContainer[c.predefine.Ids]
@@ -81,9 +86,13 @@ func (c *PredefineServiceHandler) getServiceInterface(metestr string) (interface
 	}
 	return nil, fmt.Errorf(c.predefine.Ids)
 }
+
+// 返回所有数据
 func (c *PredefineServiceHandler) doAllData(sdef *ServiceDefine, ids datasource.IDataSource, rBody *ServiceRequestBody) {
 	c.IDSServiceHandler.doQuery(sdef, ids, rBody)
 }
+
+// 返回元数据
 func (c *PredefineServiceHandler) doGetMeta(sdef *ServiceDefine, ids datasource.IDataSource, rBody *ServiceRequestBody) {
 	r := CreateRestResult(true)
 	sd := make(map[string]interface{})
@@ -105,6 +114,8 @@ func (c *PredefineServiceHandler) doGetMeta(sdef *ServiceDefine, ids datasource.
 	c.Ctl.Data["json"] = r
 	c.ServeJson()
 }
+
+//返回动作映射表
 func (c *PredefineServiceHandler) getActionMap() map[string]SerivceActionHandler {
 	m := c.IDSServiceHandler.getActionMap()
 	m[SrvActionALLDATA] = c.doAllData

@@ -409,7 +409,7 @@ func (c *IDSServiceHandler) getMetaData(metaid string) (*datasource.DataResultSe
 	if !ok {
 		return nil, fmt.Errorf("获取默认数据源default.mgr.G_META_ITEM出错")
 	}
-	v.AddCriteria("META_ID", datasource.OPER_EQ, metaid)
+	v.AddCriteria("META_ID", datasource.OperEq, metaid)
 	r, err := v.DoFilter()
 	if err != nil {
 		return nil, err
@@ -428,10 +428,10 @@ func (c *IDSServiceHandler) getMetaID(project string, namespace string, metaname
 	if !ok {
 		return "", fmt.Errorf("获取默认数据源default.mgr.G_META出错")
 	}
-	v.AddCriteria("NAMESPACE", datasource.OPER_EQ, namespace)
-	v.AndCriteria("METANAME", datasource.OPER_EQ, metaname)
+	v.AddCriteria("NAMESPACE", datasource.OperEq, namespace)
+	v.AndCriteria("METANAME", datasource.OperEq, metaname)
 	if project != "" {
-		v.AndCriteria("PROJECTID", datasource.OPER_EQ, project)
+		v.AndCriteria("PROJECTID", datasource.OperEq, project)
 	}
 	rs, err := v.DoFilter()
 	if err != nil {
@@ -576,24 +576,24 @@ func (c *IDSServiceHandler) doQuery(sdef *ServiceDefine, ids datasource.IDataSou
 			return
 		}
 		for _, agg := range rBody.Aggre {
-			/*	AGG_COUNT int = 1
-				AGG_SUM   int = 2
-				AGG_AVG   int = 3
-				AGG_MAX   int = 4
-				AGG_MIN   int = 5  */
+			/*	AggCount int = 1
+				AggSum   int = 2
+				AggAvg   int = 3
+				AggMax   int = 4
+				AggMin   int = 5  */
 			pred := strings.ToUpper(agg.Predicate)
 			p := 0
 			switch pred {
 			case "COUNT":
-				p = datasource.AGG_COUNT
+				p = datasource.AggCount
 			case "SUM":
-				p = datasource.AGG_SUM
+				p = datasource.AggSum
 			case "AVG":
-				p = datasource.AGG_AVG
+				p = datasource.AggAvg
 			case "MAX":
-				p = datasource.AGG_MAX
+				p = datasource.AggMax
 			case "MIN":
-				p = datasource.AGG_MIN
+				p = datasource.AggMin
 			}
 			ag.AddAggre(agg.Outfield, &datasource.AggreType{
 				Predicate: p,

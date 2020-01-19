@@ -109,7 +109,7 @@ func (c *TableDataSource) Init() error {
 func (c *TableDataSource) QueryDataByFieldValues(fv *map[string]interface{}) (*DataResultSet, error) {
 	c.ClearCriteria()
 	for pname, value := range *fv {
-		c.AndCriteria(pname, OPER_EQ, value)
+		c.AndCriteria(pname, OperEq, value)
 	}
 	return c.DoFilter()
 }
@@ -120,7 +120,7 @@ func (c *TableDataSource) QueryDataByKey(keyvalues ...interface{}) (*DataResultS
 	}
 	c.ClearCriteria()
 	for i, v := range keyvalues {
-		c.AndCriteria(c.KeyField[i].Name, OPER_EQ, v)
+		c.AndCriteria(c.KeyField[i].Name, OperEq, v)
 	}
 
 	return c.DoFilter()
