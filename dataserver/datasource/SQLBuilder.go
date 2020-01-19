@@ -11,36 +11,36 @@ import (
 var mu sync.Mutex
 
 const (
-	// 等于
+	// OperEq 等于
 	OperEq string = "="
-	// 不等于
+	// OperNoteq 不等于
 	OperNoteq string = "<>"
-	// 大于
+	// OperGt 大于
 	OperGt string = ">"
-	// 小于
+	// OperLt 小于
 	OperLt string = "<"
-	// 大于等于
+	// OperGtEg 大于等于
 	OperGtEg string = ">="
-	// 小于等于
+	// OperLtEg 小于等于
 	OperLtEg string = "<="
-	// 介于--之间
+	// OperBetween 介于--之间
 	OperBetween string = "BETWEEN"
-	// 包含
+	// OperIn 包含
 	OperIn string = "in"
 )
 
 const (
-	// 与
+	// CompAnd 与
 	CompAnd string = "and"
-	// 或
+	// CompOr 或
 	CompOr string = "or"
-	// 非
+	// CompNot 非
 	CompNot string = "not"
-	// 未知
+	// CompNone 未知
 	CompNone string = ""
 )
 
-// SQL查询条件
+// SQLCriteria SQL查询条件
 type SQLCriteria struct {
 	PropertyName string
 	Operation    string
@@ -48,28 +48,28 @@ type SQLCriteria struct {
 	Complex      string
 }
 
-// 聚合类型
+// AggreType 聚合类型
 type AggreType struct {
-	//谓词
+	// Predicate 谓词
 	Predicate int
-	//字段名
+	// ColName 字段名
 	ColName string
 }
 
 const (
-	// 计数
+	// AggCount 计数
 	AggCount int = 1
-	// 求和
+	// AggSum 求和
 	AggSum int = 2
-	// 求算术平均
+	// AggAvg 求算术平均
 	AggAvg int = 3
-	// 最大值
+	// AggMax 最大值
 	AggMax int = 4
-	// 最小值
+	// AggMin 最小值
 	AggMin int = 5
 )
 
-// SQL构造器接口
+// ISQLBuilder SQL构造器接口
 type ISQLBuilder interface {
 	AddCriteria(field, operation, complex string, value interface{}) ISQLBuilder
 	CreateSelectSQL() (string, []interface{})
@@ -82,7 +82,7 @@ type ISQLBuilder interface {
 	AddAggre(outfield string, aggreType *AggreType)
 }
 
-// SQL 构造器类
+// SQLBuilder SQL构造器类
 type SQLBuilder struct {
 	//表名
 	tableName string
@@ -98,15 +98,15 @@ type SQLBuilder struct {
 	aggre      map[string]*AggreType
 }
 
-// MySQl的SQL构造器
+// MySQLSQLBuileder MySQl的SQL构造器
 type MySQLSQLBuileder struct {
 	SQLBuilder
 }
 
-// 创建SQL构造器
+// CreateSQLBuileder2 创建SQL构造器
 func CreateSQLBuileder2(dbType string, tablename string, columns []string, orderby []string, rowslimit int, rowsoffset int) (ISQLBuilder, error) {
 	switch dbType {
-	case DBType_MySQL:
+	case DbTypeMySQL:
 		return &MySQLSQLBuileder{
 			SQLBuilder: SQLBuilder{
 				tableName:  tablename,
@@ -118,10 +118,10 @@ func CreateSQLBuileder2(dbType string, tablename string, columns []string, order
 	return nil, fmt.Errorf("不支持的数据库类型" + dbType)
 }
 
-// 创建SQL构造器
+// CreateSQLBuileder 创建SQL构造器
 func CreateSQLBuileder(dbType string, tablename string) (ISQLBuilder, error) {
 	switch dbType {
-	case DBType_MySQL:
+	case DbTypeMySQL:
 		return &MySQLSQLBuileder{
 			SQLBuilder: SQLBuilder{
 				tableName: tablename}}, nil
@@ -129,41 +129,39 @@ func CreateSQLBuileder(dbType string, tablename string) (ISQLBuilder, error) {
 	return nil, fmt.Errorf("不支持的数据库类型" + dbType)
 }
 
-// 返回查询数据库表主键信息的SQL语句
+// CreateKeyFieldsSQL 返回查询数据库表主键信息的SQL语句
 func (c *MySQLSQLBuileder) CreateKeyFieldsSQL() string {
 	if c.objectTable == "" {
 		sqlstr := "SELECT a.column_name,b.data_type FROM INFORMATION_SCHEMA.`KEY_COLUMN_USAGE` a" +
 			" inner join information_schema.columns b on a.table_name=b.table_name and a.column_name=b.column_name " +
 			" WHERE a.table_name='" + c.tableName + "' AND a.constraint_name='PRIMARY'"
 		return sqlstr
-	} else {
-		return ""
 	}
+	return ""
 }
 
-// 返回获取数据库表全部字段的SQL语句
+// CreateGetColsSQL 返回获取数据库表全部字段的SQL语句
 func (c *MySQLSQLBuileder) CreateGetColsSQL() string {
 	if c.objectTable == "" {
 		return "SELECT column_name,data_type FROM information_schema.columns WHERE table_name='" + c.tableName + "'"
-	} else {
-		return ""
 	}
+	return ""
 }
 
-// 清楚查询条件
+// ClearCriteria 清楚查询条件
 func (c *MySQLSQLBuileder) ClearCriteria() {
 	c.criteria = nil
 }
 
-// 添加聚合
-func (tc *MySQLSQLBuileder) AddAggre(outfield string, aggreType *AggreType) {
-	if tc.aggre == nil {
-		tc.aggre = make(map[string]*AggreType)
+// AddAggre 添加聚合
+func (c *MySQLSQLBuileder) AddAggre(outfield string, aggreType *AggreType) {
+	if c.aggre == nil {
+		c.aggre = make(map[string]*AggreType)
 	}
-	tc.aggre[outfield] = aggreType
+	c.aggre[outfield] = aggreType
 }
 
-// 删除条件
+// AddCriteria 删除条件
 func (c *MySQLSQLBuileder) AddCriteria(field, operation, complex string, value interface{}) ISQLBuilder {
 	mu.Lock()
 	if c.criteria == nil {
@@ -179,7 +177,7 @@ func (c *MySQLSQLBuileder) AddCriteria(field, operation, complex string, value i
 	return c
 }
 
-// 创建查询Where语句
+// createWhereSubStr 创建查询Where语句
 func (c *MySQLSQLBuileder) createWhereSubStr() (string, []interface{}) {
 	var sqlwhere string
 	param := make([]interface{}, 0, len(c.criteria))
@@ -239,19 +237,18 @@ func (c *MySQLSQLBuileder) createWhereSubStr() (string, []interface{}) {
 	return " WHERE " + sqlwhere, param
 }
 
-// 创建删除数据的SQL语句
+// CreateDeleteSQL 创建删除数据的SQL语句
 func (c *MySQLSQLBuileder) CreateDeleteSQL() (string, []interface{}) {
 	sql := "DELETE FROM " + c.tableName
 	if c.criteria != nil {
 		where, ps := c.createWhereSubStr()
 		sql += where
 		return sql, ps
-	} else {
-		return sql, nil
 	}
+	return sql, nil
 }
 
-//
+// CreateUpdateSQL 创建update语句
 func (c *MySQLSQLBuileder) CreateUpdateSQL(fieldvalues map[string]interface{}) (string, []interface{}) {
 	sql := "UPDATE " + c.tableName + " SET "
 	params := make([]interface{}, len(fieldvalues), len(fieldvalues))
@@ -272,6 +269,7 @@ func (c *MySQLSQLBuileder) CreateUpdateSQL(fieldvalues map[string]interface{}) (
 	return sql, params
 }
 
+// CreateInsertSQLByMap 创建Insert语句
 func (c *MySQLSQLBuileder) CreateInsertSQLByMap(fieldvalues map[string]interface{}) (string, []interface{}) {
 	params := make([]interface{}, len(fieldvalues), len(fieldvalues))
 	sql := "INSERT INTO " + c.tableName + " ("
@@ -290,6 +288,8 @@ func (c *MySQLSQLBuileder) CreateInsertSQLByMap(fieldvalues map[string]interface
 	sql = sql + ") VALUES (" + ps + ")"
 	return sql, params
 }
+
+// CreateSelectSQL 创建Select语句
 func (c *MySQLSQLBuileder) CreateSelectSQL() (string, []interface{}) {
 	if c.objectTable != "" && len(c.criteria) == 0 && c.rowsLimit == 0 && c.rowsOffset == 0 && len(c.orderBy) == 0 && len(c.aggre) == 0 && (len(c.columns) == 0 || c.columns[0] == "*") {
 		return c.objectTable, nil
@@ -383,6 +383,3 @@ func (c *MySQLSQLBuileder) CreateSelectSQL() (string, []interface{}) {
 ////
 ////
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-type SQLInnerJoin struct {
-}

@@ -1,14 +1,13 @@
 package datasource
 
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// TDFilter 过滤条件
 type TDFilter SQLCriteria
 
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//数据源接口
+// IDataSource 数据源接口
 //数据源接口不是线程安全的，因此每一个Web请求都需要创建独立的数据源类
 type IDataSource interface {
 	//返回数据源类型
-	GetDataSourceType() DataSourceType
+	GetDataSourceType() DSType
 	//数据源初始化
 	Init() error
 	GetName() string
@@ -25,7 +24,7 @@ type IDataSource interface {
 	GetFieldByName(name string) *MyProperty
 }
 
-//可写的数据源接口
+// IWriteableDataSource 可写的数据源接口
 type IWriteableDataSource interface {
 	Delete() error
 	Insert(values map[string]interface{}) error
@@ -35,14 +34,13 @@ type IWriteableDataSource interface {
 	OrCriteria(field, operation string, value interface{}) IFilterAdder
 }
 
-//可以过滤的数据源接口
+// ICriteriaDataSource 可以过滤的数据源接口
 type ICriteriaDataSource interface {
 	IDataSource
 	DoFilter() (*DataResultSet, error)
 }
 
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//过滤条件接口
+// IFilterAdder 过滤条件接口
 type IFilterAdder interface {
 	AddCriteria(field, operation string, value interface{}) IFilterAdder
 	AndCriteria(field, operation string, value interface{}) IFilterAdder
@@ -50,77 +48,70 @@ type IFilterAdder interface {
 	Orderby(field string, dir string) IFilterAdder
 }
 
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// 可以聚合的接口
+// IAggregativeAdder 可以聚合的接口
 type IAggregativeAdder interface {
 	AddAggre(outfield string, aggreType *AggreType)
 }
 
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// 数据源类型
-type DataSourceType int8
+// DSType 数据源类型
+type DSType int8
 
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 const (
-	// SQL数据源
-	DataSourceType_SQL DataSourceType = 1
-	// 数据库表数据源
-	DataSourceType_SQLTABLE DataSourceType = 2
-	// REST服务数据源
-	DataSourceType_REST DataSourceType = 3
-	// 枚举数据源
-	DataSourceType_ENMU DataSourceType = 4
-	// 联接数据源
-	DataSourceType_INNER DataSourceType = 5
+	// DataSourceTypeSQL SQL数据源
+	DataSourceTypeSQL DSType = 1
+	// DataSourceTypeSqltable 数据库表数据源
+	DataSourceTypeSqltable DSType = 2
+	// DataSourceTypeRest REST服务数据源
+	DataSourceTypeRest DSType = 3
+	// DataSourceTypeEnmu 枚举数据源
+	DataSourceTypeEnmu DSType = 4
+	// DataSourceTypeInner 联接数据源
+	DataSourceTypeInner DSType = 5
 )
 const (
-	// MySQL数据库类型
-	DBType_MySQL string = "mysql"
-	// Oracle数据库类型
-	DBType_Oracle string = "oracle"
+	// DbTypeMySQL MySQL数据库类型
+	DbTypeMySQL string = "mysql"
+	// DbTypeOracle Oracle数据库类型
+	DbTypeOracle string = "oracle"
 )
 
-// 根据数据源类型返回数据源类型的String表达
-func GetDataSourceTypeStr(t DataSourceType) string {
+// GetDataSourceTypeStr 根据数据源类型返回数据源类型的String表达
+func GetDataSourceTypeStr(t DSType) string {
 	switch t {
-	case DataSourceType_SQL:
+	case DataSourceTypeSQL:
 		return "SQL"
-	case DataSourceType_SQLTABLE:
+	case DataSourceTypeSqltable:
 		return "SQLTable"
-	case DataSourceType_REST:
+	case DataSourceTypeRest:
 		return "RESTService"
-	case DataSourceType_ENMU:
+	case DataSourceTypeEnmu:
 		return "ENMU"
-	case DataSourceType_INNER:
+	case DataSourceTypeInner:
 		return "INNER"
 	}
 	return "UNKNOW"
 }
 
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//通用类型
-
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 const (
-	//整数
-	Property_Datatype_INT string = "INT"
-	//浮点数
-	Property_Datatype_DOU string = "DOUBLE"
-	//字符串
-	Property_Datatype_STR string = "STRING"
-	//日期
-	Property_Datatype_DATE string = "DATE"
-	//时间
-	Property_Datatype_TIME string = "TIME"
-	//枚举类型
-	Property_Datatype_ENUM string = "ENUM"
-	//数据集，表示该数据数值是一个数据集
-	Property_Datatype_DS string = "DATASET"
-	//未知类型
-	Property_Datatype_UNKN string = ""
+	// PropertyDatatypeInt 整数
+	PropertyDatatypeInt string = "INT"
+	// PropertyDatatypeDou 浮点数
+	PropertyDatatypeDou string = "DOUBLE"
+	// PropertyDatatypeStr 字符串
+	PropertyDatatypeStr string = "STRING"
+	// PropertyDatatypeDate 日期
+	PropertyDatatypeDate string = "DATE"
+	// PropertyDatatypeTime 时间
+	PropertyDatatypeTime string = "TIME"
+	// PropertyDatatypeEnum 枚举类型
+	PropertyDatatypeEnum string = "ENUM"
+	// PropertyDatatypeDs 数据集，表示该数据数值是一个数据集
+	PropertyDatatypeDs string = "DATASET"
+	// PropertyDatatypeUnkn 未知类型
+	PropertyDatatypeUnkn string = ""
 )
 
-// 联接时使用的输出字段
+// OutFieldProperty 联接时使用的输出字段
 type OutFieldProperty struct {
 	Source     IDataSource `json:"-"`
 	JoinField  string
@@ -128,57 +119,52 @@ type OutFieldProperty struct {
 	ValueFunc  func(record []interface{}, field []*MyProperty, Source IDataSource) interface{} `json:"-"`
 }
 
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//对象属性
+// MyProperty 对象属性
 type MyProperty struct {
-	//属性名
+	// Name属性名
 	Name string
-	//类型名in
+	// DataType 类型名
 	DataType string
-	//是否为联接字段
+	// OutJoin 是否为联接字段
 	OutJoin bool
-	//显示名
+	// Caption 显示名
 	Caption string
-	//联接定义
+	// OutJoinDefine 联接定义
 	OutJoinDefine *OutFieldProperty
-	//是否隐藏,该属性目前没有处理
+	// Hidden 是否隐藏,该属性目前没有处理
 	Hidden bool
 }
 
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//数据源
+// DataSource 数据源
 type DataSource struct {
-	dtype    DataSourceType
+	dtype    DSType
 	Name     string
 	KeyField []*MyProperty
 	Field    []*MyProperty
 }
 
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// 返回结果时用的字段描述
+// FieldDesc 返回结果时用的字段描述
 type FieldDesc struct {
 	FieldType string
 	Index     int
-	//字段元数据，默认由PostAction中的配置信息为fieldmeta的处理程序填充
+	// Meta 字段元数据，默认由PostAction中的配置信息为fieldmeta的处理程序填充
 	Meta *map[string]string
 }
 
-// 字段描述类型
+// FieldDescType 字段描述类型
 type FieldDescType map[string]*FieldDesc
 
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// 返回的结果集
+// DataResultSet 返回的结果集
 type DataResultSet struct {
-	// 字段列表
+	// Fields 字段列表
 	Fields FieldDescType
-	// 二维表数据
+	// Data 二维表数据
 	Data [][]interface{}
-	//ResultSet的元数据
+	// Meta ResultSet的元数据
 	Meta string
 }
 
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// 复制FieldDescType
+// Copy 复制FieldDescType
 func (f FieldDescType) Copy() FieldDescType {
 	r := make(FieldDescType)
 	for k, v := range f {
@@ -187,53 +173,52 @@ func (f FieldDescType) Copy() FieldDescType {
 	return r
 }
 
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// 类型表达形式转换
+// ConvertMySQLType2CommonType 类型表达形式转换
 func ConvertMySQLType2CommonType(t string) string {
 	switch t {
 	case "VARCHAR":
-		return Property_Datatype_STR
+		return PropertyDatatypeStr
 	case "NVARCHAR":
-		return Property_Datatype_STR
+		return PropertyDatatypeStr
 	case "CHAR":
-		return Property_Datatype_STR
+		return PropertyDatatypeStr
 	case "INT":
-		return Property_Datatype_INT
+		return PropertyDatatypeInt
 	case "TINYINT":
-		return Property_Datatype_INT
+		return PropertyDatatypeInt
 	case "SMALLINT":
-		return Property_Datatype_INT
+		return PropertyDatatypeInt
 	case "MEDIUMINT":
-		return Property_Datatype_INT
+		return PropertyDatatypeInt
 	case "INTEGER":
-		return Property_Datatype_INT
+		return PropertyDatatypeInt
 	case "BIGINT":
-		return Property_Datatype_INT
+		return PropertyDatatypeInt
 	case "FLOAT":
-		return Property_Datatype_DOU
+		return PropertyDatatypeDou
 	case "DOUBLE":
-		return Property_Datatype_DOU
+		return PropertyDatatypeDou
 	case "TIMESTAMP":
-		return Property_Datatype_TIME
+		return PropertyDatatypeTime
 	case "DATE":
-		return Property_Datatype_DATE
+		return PropertyDatatypeDate
 	case "DATETIME":
-		return Property_Datatype_TIME
+		return PropertyDatatypeTime
 	case "TIME":
-		return Property_Datatype_TIME
+		return PropertyDatatypeTime
 	}
-	return Property_Datatype_UNKN
+	return PropertyDatatypeUnkn
 }
 
-// 对比连个数据源是否是一个数据源
-func DataSourceCompare(dsa, dsb *DBDataSource) bool {
+// SourceCompare 对比连个数据源是否是一个数据源
+func SourceCompare(dsa, dsb *DBDataSource) bool {
 	if dsa == nil && dsb == nil {
 		return false
 	}
 	return dsa.DBAlias == dsb.DBAlias
 }
 
-// 创建可写的数据表数据源
+// CreateWriteableTableDataSource 创建可写的数据表数据源
 func CreateWriteableTableDataSource(name, dbAlias, tablename string, fields ...string) *WriteableTableSource {
 	ids := &WriteableTableSource{
 		TableDataSource{
@@ -250,7 +235,7 @@ func CreateWriteableTableDataSource(name, dbAlias, tablename string, fields ...s
 	return ids
 }
 
-// 创建数据表数据源
+// CreateTableDataSource 创建数据表数据源
 func CreateTableDataSource(name, dbAlias, tablename string, fields ...string) *TableDataSource {
 
 	ids := &TableDataSource{
@@ -267,7 +252,7 @@ func CreateTableDataSource(name, dbAlias, tablename string, fields ...string) *T
 	return ids
 }
 
-// 根据数数据组创建一堆字段属性,不设定属性类型
+// CreateFieldNonType 根据数数据组创建一堆字段属性,不设定属性类型
 func CreateFieldNonType(fields ...string) []*MyProperty {
 	temp := make([]*MyProperty, len(fields), len(fields))
 	for i, v := range fields {

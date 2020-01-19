@@ -11,7 +11,7 @@ import (
 	"testing"
 )
 
-var ids *TableDataSource = nil
+var ids *TableDataSource
 
 func TestMain(m *testing.M) {
 	fmt.Println("Before ====================")
@@ -42,7 +42,7 @@ func createIDS() *TableDataSource {
 							Name:    "ORG_NAME",
 							OutJoin: true,
 							OutJoinDefine: &OutFieldProperty{
-								Source:     createIDS_ORG(),
+								Source:     createIDSOrg(),
 								ValueField: "ORG_NAME",
 								JoinField:  "ORG_ID",
 								ValueFunc:  nil,
@@ -61,7 +61,7 @@ func createIDS() *TableDataSource {
 	}
 	return ids
 }
-func createIDS_ORG() *TableDataSource {
+func createIDSOrg() *TableDataSource {
 	idso := &TableDataSource{
 		DBDataSource: DBDataSource{
 			DataSource: DataSource{
@@ -83,7 +83,7 @@ func createIDS_ORG() *TableDataSource {
 	return idso
 }
 
-func createIDS_river() *TableDataSource {
+func createIDSRiver() *TableDataSource {
 	if ids == nil {
 		ids = &TableDataSource{
 			DBDataSource: DBDataSource{
@@ -114,7 +114,7 @@ func printRS(rs *DataResultSet) {
 }
 
 func TestRiverIDS(t *testing.T) {
-	ids := createIDS_river()
+	ids := createIDSRiver()
 	ids.RowsLimit = 1000
 	ids.AddCriteria("Z", OperLt, 5.00)
 	ids.AddAggre("CNT", &AggreType{
@@ -150,30 +150,4 @@ func TestAddCriteria(t *testing.T) {
 		fmt.Print(err)
 	}
 	printRS(rs)
-	//fmt.Println(reflect.TypeOf(inf))
-	//fmt.Println(reflect.ValueOf(inf))
-	//_,e:=inf.(TableDataSource)
-	//fmt.Println(e)
 }
-
-//func TestSQLDataSource_GetAllData(t *testing.T) {
-//	var ids *SQLDataSource
-//	ids = &SQLDataSource{
-//		DBDataSource: DBDataSource{
-//			DataSource: DataSource{
-//				Name: "JEDAUSERSLE",
-//			},
-//			DBAlias:        "default",
-//			AutoFillFields: true,
-//		},
-//		ParamsValues: []interface{}{"001031"},
-//		SQL:          "select * from  JEDA_USER where org_id=?",
-//	}
-//	ids.Init()
-//	ids.AddCriteria("USER_ID", OperEq, "ceshiwpj")
-//	rs, _ := ids.DoFilter()
-//	for _, item := range ids.Field {
-//		fmt.Printf("%s\t%s\n", item.Name, item.DataType)
-//	}
-//	printRS(rs)
-//}

@@ -1,19 +1,17 @@
 package datasource
 
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 const (
-	//内连接
-	INNER_JOIN string = "INNER"
-	//左链接
-	LEFT_JOIN string = "LEFT"
-	//右链接
-	RIGHT_JOIN string = "RIGHT"
-	//全链接
-	FULL_JOIN string = "FULL"
+	// InnerJoin 内连接
+	InnerJoin string = "INNER"
+	// LeftJoin 左链接
+	LeftJoin string = "LEFT"
+	// RightJoin 右链接
+	RightJoin string = "RIGHT"
+	// FullJoin 全链接
+	FullJoin string = "FULL"
 )
 
-//李磊  63202576 522
+// CompositeDataSourceItem 复合数据项定义
 type CompositeDataSourceItem struct {
 	BaseCriteria
 	Source     IDataSource
@@ -21,6 +19,7 @@ type CompositeDataSourceItem struct {
 	JoinMethod string
 }
 
+// CompositeTableDataSource 复合数据表数据源
 type CompositeTableDataSource struct {
 	//BaseCriteria
 	DataSource
@@ -28,26 +27,33 @@ type CompositeTableDataSource struct {
 	joinedDataSource []*CompositeDataSourceItem
 }
 
-func (c *CompositeTableDataSource) GetDataSourceType() DataSourceType {
-	return DataSourceType_INNER
+// GetDataSourceType 返回数据源类型
+func (c *CompositeTableDataSource) GetDataSourceType() DSType {
+	return DataSourceTypeInner
 }
 
+// GetAllData 返回全部数据
 func (c *CompositeTableDataSource) GetAllData() (*DataResultSet, error) {
 	panic("implement me")
 }
 
+// QueryDataByKey 根据主键返回数据
 func (c *CompositeTableDataSource) QueryDataByKey(keyvalues ...interface{}) (*DataResultSet, error) {
 	panic("implement me")
 }
 
+// QueryDataByFieldValues 根据字段值返回数据
 func (c *CompositeTableDataSource) QueryDataByFieldValues(fv *map[string]interface{}) (*DataResultSet, error) {
 	panic("implement me")
 }
 
+// Init 初始化
 func (c *CompositeTableDataSource) Init() error {
 	c.joinedDataSource = make([]*CompositeDataSourceItem, 0, 10)
 	return nil
 }
+
+// JoinDataSource 联接其他数据源
 func (c *CompositeTableDataSource) JoinDataSource(tableSource *TableDataSource, OutField []string, JoinMethod string) *CompositeDataSourceItem {
 	item := &CompositeDataSourceItem{
 		Source:     tableSource,

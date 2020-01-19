@@ -35,7 +35,7 @@ func TestRequestBody(t *testing.T) {
     }
   ]
 }`
-	var s ServiceRequestBody
+	var s SRequestBody
 	json.Unmarshal([]byte(jsonstr), &s)
 	fmt.Println(s)
 

@@ -1,39 +1,44 @@
 package mgr
 
+// GProject 项目
 type GProject struct {
-	Id          string
+	ID          string
 	ProjectName string
 	Owner       string
 }
 
+// GUser 用户
 type GUser struct {
-	UserId    string
+	UserID    string
 	UserName  string
 	LoginName string
 	Pwd       string
 	UserKey   string
-	OpenId    string
+	OpenID    string
 	Email     string
 }
 
+// GDataSourceURL 数据源配置
 type GDataSourceURL struct {
-	Id        string
+	ID        string
 	DbType    string
-	DbUrl     string
+	DbURL     string
 	UserName  string
 	Pwd       string
-	ProjectId string
+	ProjectID string
 	DbAlias   string
 }
 
+// Gids 数据源
 type Gids struct {
-	Id        string
+	ID        string
 	Meta      string
-	ProjectId string
+	ProjectID string
 }
 
+// GService 服务
 type GService struct {
-	Id          string
+	ID          string
 	BodyType    string
 	ServiceType string
 	NameSpace   string
@@ -41,6 +46,6 @@ type GService struct {
 	MsgLog      int
 	Security    int
 	Meta        string
-	ProjectId   string
+	ProjectID   string
 	Context     string
 }

@@ -1,6 +1,6 @@
 package service
 
-// 调用rest服务的服务
+// RestService 调用rest服务的服务
 type RestService struct {
 	ServiceURL string
 }

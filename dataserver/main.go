@@ -31,7 +31,7 @@ func reloadDBUrl() error {
 		username := row[rs.Fields["USERNAME"].Index].(string)
 		pwd := row[rs.Fields["PWD"].Index].(string)
 		alias := row[rs.Fields["DBALIAS"].Index].(string)
-		if dbtype == datasource.DBType_MySQL {
+		if dbtype == datasource.DbTypeMySQL {
 			dburl := row[rs.Fields["DBURL"].Index].(string)
 			logs.Info("\t%s  user:%s", dburl, username)
 			dburl = strings.ReplaceAll(dburl, "{username}", username)

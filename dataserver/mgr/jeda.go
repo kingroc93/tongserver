@@ -11,28 +11,28 @@ import (
 	"tongserver.dataserver/utils"
 )
 
-//后台管理控制器
+// JedaController 后台管理控制器
 type JedaController struct {
 	beego.Controller
 }
 
-//生成二维码的控制器
+// QrcodeController 生成二维码的控制器
 type QrcodeController struct {
 	beego.Controller
 }
 
-//重新加载元数据的函数句柄类型
+// reloadMetaFun 重新加载元数据的函数句柄类型
 type reloadMetaFun func() error
 
-//用于加载元数据的函数列表
+// metaFuns 用于加载元数据的函数列表
 var metaFuns = make([]reloadMetaFun, 0, 10)
 
-//添加加载元数据的函数句柄
+// AddMetaFuns 添加加载元数据的函数句柄
 func AddMetaFuns(f reloadMetaFun) {
 	metaFuns = append(metaFuns, f)
 }
 
-//生成二维码
+// Get 生成二维码
 func (c *QrcodeController) Get() {
 	cnt := c.Input().Get("c")
 	bs := c.Input().Get("t")
@@ -48,11 +48,14 @@ func (c *QrcodeController) Get() {
 	png, _ = qrcode.Encode(cnt, qrcode.Medium, size)
 	c.Ctx.Output.Body(png)
 }
+
+// GetSrvs 返回所有服务
 func (c *JedaController) GetSrvs() {
 	c.Data["json"] = datasource.IDSContainer
 	c.ServeJSON()
 }
 
+// ReloadMetaData 重新加载系统元数据
 func ReloadMetaData() error {
 	for _, f := range metaFuns {
 		err := f()
@@ -63,7 +66,7 @@ func ReloadMetaData() error {
 	return nil
 }
 
-//重新加载元数据
+// ReloadMetaData 重新加载元数据
 func (c *JedaController) ReloadMetaData() {
 	err := ReloadMetaData()
 	if err != nil {
@@ -75,12 +78,12 @@ func (c *JedaController) ReloadMetaData() {
 	c.ServeJSON()
 }
 
-//返回用户列表
+// GetUsers 返回用户列表
 func (c *JedaController) GetUsers() {
 
 }
 
-//范湖菜单信息
+// GetMenu 范湖菜单信息
 func (c *JedaController) GetMenu() {
 	var maps []orm.Params
 	o := orm.NewOrm()

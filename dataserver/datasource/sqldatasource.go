@@ -17,8 +17,8 @@ package datasource
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //// SQLDataSource
 ////返回数据源类型
-//func (c *SQLDataSource) GetDataSourceType() DataSourceType {
-//	return DataSourceType_SQL
+//func (c *SQLDataSource) GetDataSourceType() DSType {
+//	return DataSourceTypeSQL
 //}
 //
 ////数据源初始化

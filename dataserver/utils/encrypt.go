@@ -11,7 +11,7 @@ import (
 	"io"
 )
 
-// 加密并返回加密字符串
+// AesEncrypt 加密并返回加密字符串
 func AesEncrypt(orig string, key string) string {
 	// 转成字节数组
 	origData := []byte(orig)
@@ -32,7 +32,7 @@ func AesEncrypt(orig string, key string) string {
 	return base64.StdEncoding.EncodeToString(cryted)
 }
 
-// 解密
+// AesDecrypt 解密
 func AesDecrypt(cryted string, key string) string {
 	// 转成字节数组
 	crytedByte, _ := base64.StdEncoding.DecodeString(cryted)
@@ -52,7 +52,7 @@ func AesDecrypt(cryted string, key string) string {
 	return string(orig)
 }
 
-//补码
+// PKCS7Padding 补码
 //AES加密数据块分组长度必须为128bit(byte[16])，密钥长度可以是128bit(byte[16])、192bit(byte[24])、256bit(byte[32])中的任意一个。
 func PKCS7Padding(ciphertext []byte, blocksize int) []byte {
 	padding := blocksize - len(ciphertext)%blocksize
@@ -60,14 +60,14 @@ func PKCS7Padding(ciphertext []byte, blocksize int) []byte {
 	return append(ciphertext, padtext...)
 }
 
-//去码
+// PKCS7UnPadding 去码
 func PKCS7UnPadding(origData []byte) []byte {
 	length := len(origData)
 	unpadding := int(origData[length-1])
 	return origData[:(length - unpadding)]
 }
 
-// 加密
+// AESEncrypt 加密
 func AESEncrypt(src []byte, key []byte) (encrypted []byte) {
 	cipher, _ := aes.NewCipher(generateKey(key))
 	length := (len(src) + aes.BlockSize) / aes.BlockSize
@@ -86,7 +86,7 @@ func AESEncrypt(src []byte, key []byte) (encrypted []byte) {
 	return encrypted
 }
 
-// 解密
+// AESDecrypt 解密
 func AESDecrypt(encrypted []byte, key []byte) (decrypted []byte) {
 	cipher, _ := aes.NewCipher(generateKey(key))
 	decrypted = make([]byte, len(encrypted))
@@ -103,6 +103,7 @@ func AESDecrypt(encrypted []byte, key []byte) (decrypted []byte) {
 	return decrypted[:trim]
 }
 
+// generateKey generateKey
 func generateKey(key []byte) (genKey []byte) {
 	genKey = make([]byte, 16)
 	copy(genKey, key)
@@ -114,19 +115,19 @@ func generateKey(key []byte) (genKey []byte) {
 	return genKey
 }
 
-// 返回hash值
+// GetHmacCode 返回hash值
 func GetHmacCode(s string, secret string) string {
 	h := hmac.New(sha256.New, []byte(secret))
 	io.WriteString(h, s)
 	return fmt.Sprintf("%x", h.Sum(nil))
 }
 
-// 数据进base64编码
+// EncodeURLBase64 数据进base64编码
 func EncodeURLBase64(input string) string {
 	return base64.URLEncoding.EncodeToString([]byte(input))
 }
 
-// 数据进base64解码
+// DecodeBase64 数据进base64解码
 func DecodeBase64(input string) string {
 	decodeBytes, err := base64.StdEncoding.DecodeString(input)
 	if err != nil {
@@ -135,7 +136,7 @@ func DecodeBase64(input string) string {
 	return string(decodeBytes)
 }
 
-// 数据进base64解码
+// DecodeURLBase64 数据进base64解码
 func DecodeURLBase64(input string) string {
 	decodeBytes, err := base64.URLEncoding.DecodeString(input)
 	if err != nil {

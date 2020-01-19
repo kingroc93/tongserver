@@ -35,26 +35,25 @@ const (
 
 	//以下三个常量均为通过QueryString传入的参数名
 	//针对查询自动分页中每页记录数
-	REQUEST_PARAM_PAGESIZE string = "_pagesize"
+	RequestParamPagesize string = "_pagesize"
 	//针对查询自动分页中的页索引
-	REQUEST_PARAM_PAGEINDEX string = "_pageindex"
+	RequestParamPageindex string = "_pageindex"
 	//是否返回字段元数据，默认为返回
-	REQUEST_PARAM_NOFIELDSINFO string = "_nofield"
+	RequestParamNofieldsinfo string = "_nofield"
 	//当前请求不执行而是只返回SQL语句，仅针对IDS类型的服务有效
-	REQUEST_PARAM_SQL string = "_sql"
+	RequestParamSQL string = "_sql"
 	//当前请求的响应信息不直接返回
 	//该参数只对query、all两个操作起作用
-	REQUEST_PARAM_CACHE      string = "_cache"
-	REQUEST_PARAM_CACHEBYKEY string = "_cachekey"
+	RequestParamCache      string = "_cache"
+	RequestParamCachebykey string = "_cachekey"
 )
 
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// IDSServiceHandler 数据源服务处理句柄
 type IDSServiceHandler struct {
-	ServiceHandlerBase
+	SHandlerBase
 }
 
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// 在switch中处理推土机函数
+// doBulldozer 在switch中处理推土机函数
 func (c *IDSServiceHandler) doBulldozer(dataSet *datasource.DataResultSet, index int, name string, param map[string]interface{}) {
 	switch name {
 	case "DictMappingfunc":
@@ -78,8 +77,7 @@ func (c *IDSServiceHandler) doBulldozer(dataSet *datasource.DataResultSet, index
 	}
 }
 
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// 处理推土机函数
+// DoBulldozer 处理推土机函数
 func (c *IDSServiceHandler) DoBulldozer(dataSet *datasource.DataResultSet, bulldozer []*CommonParamsType) *datasource.DataResultSet {
 	if bulldozer == nil {
 		return dataSet
@@ -96,7 +94,6 @@ func (c *IDSServiceHandler) DoBulldozer(dataSet *datasource.DataResultSet, bulld
 	return dataSet
 }
 
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 判断ids是否为DataSource.IWriteableDataSource接口,判断当前请求是否为post,如果是IWriteableDataSource接口则返回
 // IWriteableDataSource接口实例,否则返回nil
 func (c *IDSServiceHandler) checkMethodAndWriteableInf(ids interface{}) datasource.IWriteableDataSource {
@@ -134,7 +131,7 @@ func (c *IDSServiceHandler) getVauleMapFromStringMap(svalue map[string]string, i
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 处理删除
-func (c *IDSServiceHandler) doDelete(sdef *ServiceDefine, ids datasource.IDataSource, rBody *ServiceRequestBody) {
+func (c *IDSServiceHandler) doDelete(sdef *SDefine, ids datasource.IDataSource, rBody *SRequestBody) {
 	if inf := c.checkMethodAndWriteableInf(ids); inf != nil {
 		if rBody.Delete != "true" {
 			c.createErrorResponse("报文Delete节点的值必须为true")
@@ -154,14 +151,14 @@ func (c *IDSServiceHandler) doDelete(sdef *ServiceDefine, ids datasource.IDataSo
 			c.createErrorResponseByError(err)
 		} else {
 			c.setResult("处理成功")
-			c.ServeJson()
+			c.ServeJSON()
 		}
 	}
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //处理更新
-func (c *IDSServiceHandler) doUpdate(sdef *ServiceDefine, ids datasource.IDataSource, rBody *ServiceRequestBody) {
+func (c *IDSServiceHandler) doUpdate(sdef *SDefine, ids datasource.IDataSource, rBody *SRequestBody) {
 	if inf := c.checkMethodAndWriteableInf(ids); inf != nil {
 		if rBody.Update == nil {
 			c.createErrorResponse("报文没有update节点")
@@ -186,14 +183,14 @@ func (c *IDSServiceHandler) doUpdate(sdef *ServiceDefine, ids datasource.IDataSo
 			c.createErrorResponseByError(err)
 		} else {
 			c.setResult("处理成功")
-			c.ServeJson()
+			c.ServeJSON()
 		}
 	}
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 处理添加
-func (c *IDSServiceHandler) doInsert(sdef *ServiceDefine, ids datasource.IDataSource, rBody *ServiceRequestBody) {
+func (c *IDSServiceHandler) doInsert(sdef *SDefine, ids datasource.IDataSource, rBody *SRequestBody) {
 	if inf := c.checkMethodAndWriteableInf(ids); inf != nil {
 		if rBody.Insert == nil {
 			c.createErrorResponse("报文没有insert节点")
@@ -208,14 +205,14 @@ func (c *IDSServiceHandler) doInsert(sdef *ServiceDefine, ids datasource.IDataSo
 			c.createErrorResponseByError(err)
 		} else {
 			c.setResult("处理成功")
-			c.ServeJson()
+			c.ServeJSON()
 		}
 	}
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //返回所有数据
-func (c *IDSServiceHandler) doAllData(sdef *ServiceDefine, ids datasource.IDataSource, rBody *ServiceRequestBody) {
+func (c *IDSServiceHandler) doAllData(sdef *SDefine, ids datasource.IDataSource, rBody *SRequestBody) {
 	c.setPageParams(ids)
 	resuleset, err := ids.GetAllData()
 	if err != nil {
@@ -224,7 +221,7 @@ func (c *IDSServiceHandler) doAllData(sdef *ServiceDefine, ids datasource.IDataS
 	}
 	if rBody == nil {
 		c.setResultSet(resuleset)
-		c.ServeJson()
+		c.ServeJSON()
 	} else {
 		resuleset, err = c.doPostAction(c.DoBulldozer(resuleset, rBody.Bulldozer), rBody)
 		if err != nil {
@@ -232,7 +229,7 @@ func (c *IDSServiceHandler) doAllData(sdef *ServiceDefine, ids datasource.IDataS
 			return
 		}
 		c.setResultSet(resuleset)
-		c.ServeJson()
+		c.ServeJSON()
 	}
 }
 
@@ -241,7 +238,7 @@ func (c *IDSServiceHandler) doAllData(sdef *ServiceDefine, ids datasource.IDataS
 // 如前N天，lastday:1    lastday:-3
 func (c *IDSServiceHandler) convertParamValues(value string, datatype string) (interface{}, error) {
 	//特殊处理日期类型
-	if datatype == datasource.Property_Datatype_TIME || datatype == datasource.Property_Datatype_DATE {
+	if datatype == datasource.PropertyDatatypeTime || datatype == datasource.PropertyDatatypeDate {
 		switch {
 		case strings.HasPrefix(value, "addday"):
 			{
@@ -383,7 +380,7 @@ func (c *IDSServiceHandler) addOneCriteria(v *CriteriaInRBody, ids datasource.ID
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //根据请求的报文填充Criteria,ids必须实现DataSource.IFilterAdder接口
-func (c *IDSServiceHandler) fillCriteriaFromRbody(ids datasource.IDataSource, rBody *ServiceRequestBody) error {
+func (c *IDSServiceHandler) fillCriteriaFromRbody(ids datasource.IDataSource, rBody *SRequestBody) error {
 	_, okfc := ids.(datasource.IFilterAdder)
 	//处理条件
 	if !okfc {
@@ -442,7 +439,7 @@ func (c *IDSServiceHandler) getMetaID(project string, namespace string, metaname
 }
 
 //数据后处理
-func (c *IDSServiceHandler) doPostAction(dataSet *datasource.DataResultSet, rBody *ServiceRequestBody) (*datasource.DataResultSet, error) {
+func (c *IDSServiceHandler) doPostAction(dataSet *datasource.DataResultSet, rBody *SRequestBody) (*datasource.DataResultSet, error) {
 	if len(rBody.PostAction) == 0 {
 		return dataSet, nil
 	}
@@ -535,7 +532,7 @@ func (c *IDSServiceHandler) doPostAction(dataSet *datasource.DataResultSet, rBod
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 处理查询报文
-func (c *IDSServiceHandler) doQuery(sdef *ServiceDefine, ids datasource.IDataSource, rBody *ServiceRequestBody) {
+func (c *IDSServiceHandler) doQuery(sdef *SDefine, ids datasource.IDataSource, rBody *SRequestBody) {
 	if rBody == nil {
 		c.doAllData(sdef, ids, rBody)
 		return
@@ -608,17 +605,17 @@ func (c *IDSServiceHandler) doQuery(sdef *ServiceDefine, ids datasource.IDataSou
 		resuleset, err = c.doPostAction(c.DoBulldozer(resuleset, rBody.Bulldozer), rBody)
 		if err != nil {
 			c.createErrorResponseByError(err)
-			c.ServeJson()
+			c.ServeJSON()
 		}
 		c.setResultSet(resuleset)
 	}
 
-	c.ServeJson()
+	c.ServeJSON()
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 返回服务元数据
-func (c *IDSServiceHandler) doGetMeta(sdef *ServiceDefine, ids datasource.IDataSource, rBody *ServiceRequestBody) {
+func (c *IDSServiceHandler) doGetMeta(sdef *SDefine, ids datasource.IDataSource, rBody *SRequestBody) {
 	r := CreateRestResult(true)
 	sd := make(map[string]interface{})
 	r["servicedefine"] = sd
@@ -653,25 +650,25 @@ func (c *IDSServiceHandler) doGetMeta(sdef *ServiceDefine, ids datasource.IDataS
 	r["ids"] = imp
 
 	c.Ctl.Data["json"] = r
-	c.ServeJson()
+	c.ServeJSON()
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 返回缓存的结果数据
-func (c *IDSServiceHandler) doGetCache(sdef *ServiceDefine, ids datasource.IDataSource, rBody *ServiceRequestBody) {
-	key := c.Ctl.Input().Get(REQUEST_PARAM_CACHEBYKEY)
+func (c *IDSServiceHandler) doGetCache(sdef *SDefine, ids datasource.IDataSource, rBody *SRequestBody) {
+	key := c.Ctl.Input().Get(RequestParamCachebykey)
 	if key == "" {
 		r := CreateRestResult(false)
-		r["msg"] = REQUEST_PARAM_CACHEBYKEY + "不得为空"
+		r["msg"] = RequestParamCachebykey + "不得为空"
 		c.Ctl.Data["json"] = r
-		c.ServeJson()
+		c.ServeJSON()
 	}
 	obj := utils.DataSetResultCache.Get(key)
 	if obj == nil {
 		r := CreateRestResult(false)
 		r["msg"] = "没有找到请求的缓存信息"
 		c.Ctl.Data["json"] = r
-		c.ServeJson()
+		c.ServeJSON()
 		return
 	}
 	r, ok := obj.(RestResult)
@@ -679,7 +676,7 @@ func (c *IDSServiceHandler) doGetCache(sdef *ServiceDefine, ids datasource.IData
 		r := CreateRestResult(false)
 		r["msg"] = "缓存对象类型非法"
 		c.Ctl.Data["json"] = r
-		c.ServeJson()
+		c.ServeJSON()
 		return
 	}
 	times := r["cachetimes"].(int)
@@ -707,7 +704,7 @@ func (c *IDSServiceHandler) doGetCache(sdef *ServiceDefine, ids datasource.IData
 	}
 	r["result"] = true
 	c.Ctl.Data["json"] = r
-	c.ServeJson()
+	c.ServeJSON()
 
 }
 
@@ -728,7 +725,7 @@ func (c *IDSServiceHandler) getActionMap() map[string]SerivceActionHandler {
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 根据主键返回数据
-func (c *IDSServiceHandler) doGetValueByKey(sdef *ServiceDefine, ids datasource.IDataSource, rBody *ServiceRequestBody) {
+func (c *IDSServiceHandler) doGetValueByKey(sdef *SDefine, ids datasource.IDataSource, rBody *SRequestBody) {
 	fs := ids.GetKeyFields()
 	params := make([]interface{}, len(fs), len(fs))
 	for i, f := range fs {
@@ -745,16 +742,16 @@ func (c *IDSServiceHandler) doGetValueByKey(sdef *ServiceDefine, ids datasource.
 	} else {
 		c.setResultSet(c.DoBulldozer(resuleset, rBody.Bulldozer))
 	}
-	c.ServeJson()
+	c.ServeJSON()
 
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 返回请求报文
-func (c *IDSServiceHandler) getRBody() *ServiceRequestBody {
-	var rBody *ServiceRequestBody
+func (c *IDSServiceHandler) getRBody() *SRequestBody {
+	var rBody *SRequestBody
 	if c.Ctl.Ctx.Request.Method == "POST" {
-		rBody = &ServiceRequestBody{}
+		rBody = &SRequestBody{}
 		err := json.Unmarshal([]byte(c.Ctl.Ctx.Input.RequestBody), rBody)
 		if err != nil {
 			c.createErrorResponse("解析报文时发生错误" + err.Error())
@@ -776,9 +773,8 @@ func (c *IDSServiceHandler) getServiceInterface(metestr string) (interface{}, er
 	return datasource.CreateIDSFromName(meta["ids"].(string))
 }
 
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// 处理服务请求的入口
-func (c *IDSServiceHandler) DoSrv(sdef *ServiceDefine, inf ServiceHandlerInterface) {
+// DoSrv 处理服务请求的入口
+func (c *IDSServiceHandler) DoSrv(sdef *SDefine, inf SHandlerInterface) {
 	metestr := sdef.Meta
 	//////////////////////////////////////////////////////////////////////////
 	//调用传入的接口中的方法实现下面的功能,因为需要通过不同的接口实现来实现不同的行为

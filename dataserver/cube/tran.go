@@ -6,15 +6,13 @@ import (
 	"tongserver.dataserver/datasource"
 )
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//数据集后处理句柄，返回新的结果集
+// DataSetBulldozerOperator 数据集后处理句柄，返回新的结果集
 type DataSetBulldozerOperator func(dataset *datasource.DataResultSet, params map[string]interface{})
 
-//数据集后处理行句柄，不返回新的结果集
+// HandlerFunc 数据集后处理行句柄，不返回新的结果集
 type HandlerFunc func(dataset *datasource.DataResultSet, index int, params map[string]interface{})
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//格式化数据集中的数据，格式化以后的数据类型均为string，FieldDesc中的数据类型不变
+// FormatDatafunc 格式化数据集中的数据，格式化以后的数据类型均为string，FieldDesc中的数据类型不变
 func FormatDatafunc(dataset *datasource.DataResultSet, index int, params map[string]interface{}) {
 	for k, v := range params {
 		if dataset.Fields[k] == nil {
@@ -31,11 +29,10 @@ func FormatDatafunc(dataset *datasource.DataResultSet, index int, params map[str
 	}
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// 根据隐藏的列返回显示的列
+// CreateShowFieldList 根据隐藏的列返回显示的列
 func CreateShowFieldList(dataset *datasource.DataResultSet, hidden []string) []string {
 	fd := make([]string, 1, 1)
-	for k, _ := range dataset.Fields {
+	for k := range dataset.Fields {
 		inhidden := false
 		for _, i := range hidden {
 			if i == k {
@@ -50,8 +47,7 @@ func CreateShowFieldList(dataset *datasource.DataResultSet, hidden []string) []s
 	return fd
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// 列过滤,该函数必须在最后一个，否则会造成错误
+// ColumnFilterFunc 列过滤,该函数必须在最后一个，否则会造成错误
 func ColumnFilterFunc(dataset *datasource.DataResultSet, index int, params map[string]interface{}) {
 	if len(dataset.Data) == 0 || index >= len(dataset.Data) {
 		return
@@ -76,8 +72,7 @@ func ColumnFilterFunc(dataset *datasource.DataResultSet, index int, params map[s
 	}
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//在原结果集的基础上将字典的映射值添加到结果集中，返回新的结果集
+// DictMappingfunc 在原结果集的基础上将字典的映射值添加到结果集中，返回新的结果集
 func DictMappingfunc(dataset *datasource.DataResultSet, index int, params map[string]interface{}) {
 	if len(dataset.Data) == 0 || index >= len(dataset.Data) {
 		return
@@ -100,8 +95,7 @@ func DictMappingfunc(dataset *datasource.DataResultSet, index int, params map[st
 	}
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//数据集转置
+// Slice 数据集转置
 func Slice(dataset *datasource.DataResultSet, xfieldname string, yfieldnames []string, valuefields ...string) *datasource.DataResultSet {
 	fieldlist := make(map[interface{}]int)
 	temp := make(map[interface{}]([][]interface{}))
@@ -164,8 +158,7 @@ func Slice(dataset *datasource.DataResultSet, xfieldname string, yfieldnames []s
 	return result
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//数据集分组
+// GroupField 数据集分组
 func GroupField(data *datasource.DataResultSet, fieldname string) *datasource.DataResultSet {
 	temp := make(map[interface{}](*datasource.DataResultSet))
 	for _, row := range data.Data {
@@ -185,11 +178,11 @@ func GroupField(data *datasource.DataResultSet, fieldname string) *datasource.Da
 	result.Fields = make(datasource.FieldDescType)
 	result.Fields[fieldname] = &datasource.FieldDesc{
 		Index:     0,
-		FieldType: datasource.Property_Datatype_STR,
+		FieldType: datasource.PropertyDatatypeStr,
 		Meta:      nil}
 	result.Fields["DATA"] = &datasource.FieldDesc{
 		Index:     1,
-		FieldType: datasource.Property_Datatype_DS,
+		FieldType: datasource.PropertyDatatypeDs,
 		Meta:      nil}
 	result.Data = make([][]interface{}, len(temp), len(temp))
 	i := 0
@@ -202,8 +195,7 @@ func GroupField(data *datasource.DataResultSet, fieldname string) *datasource.Da
 	return result
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// 提取列
+// Row2Column 提取列
 func Row2Column(dataset *datasource.DataResultSet, fieldsname ...string) *datasource.DataResultSet {
 	if len(fieldsname) == 0 {
 		return dataset
@@ -218,7 +210,7 @@ func Row2Column(dataset *datasource.DataResultSet, fieldsname ...string) *dataso
 	}
 	//Data   [][]interface{}
 	result.Data = make([][]interface{}, len(fieldsname), len(fieldsname))
-	for i, _ := range result.Data {
+	for i := range result.Data {
 		result.Data[i] = make([]interface{}, len(dataset.Data), len(dataset.Data))
 	}
 	for j, item := range dataset.Data {

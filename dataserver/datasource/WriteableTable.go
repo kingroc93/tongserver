@@ -1,10 +1,11 @@
 package datasource
 
+// WriteableTableSource 可写的数据表数据源
 type WriteableTableSource struct {
 	TableDataSource
 }
 
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Delete 删除
 func (c *WriteableTableSource) Delete() error {
 	sqlb, err := c.createSQLBuilder()
 	if err != nil {
@@ -19,7 +20,7 @@ func (c *WriteableTableSource) Delete() error {
 	return err2
 }
 
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Insert 插入
 func (c *WriteableTableSource) Insert(values map[string]interface{}) error {
 	sqlb, err := CreateSQLBuileder(DBAlias2DBTypeContainer[c.DBAlias], c.TableName)
 	if err != nil {
@@ -30,7 +31,7 @@ func (c *WriteableTableSource) Insert(values map[string]interface{}) error {
 	return err2
 }
 
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Update 更新
 func (c *WriteableTableSource) Update(values map[string]interface{}) error {
 	sqlb, err := c.createSQLBuilder()
 	if err != nil {

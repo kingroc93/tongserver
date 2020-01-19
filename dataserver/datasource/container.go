@@ -6,15 +6,19 @@ import (
 	"tongserver.dataserver/utils"
 )
 
+// IDSContainerParam 数据源创建参数
 type IDSContainerParam map[string]interface{}
+
+// IDSContainerType 数据源容器类型
 type IDSContainerType map[string]IDSContainerParam
 
+// DBAlias2DBTypeContainer 用于保存数据连接别名和数据库类型的关系
 var DBAlias2DBTypeContainer = make(map[string]string)
 
-//数据源的配置信息，从数据库中获取，由main函数加载
+// IDSContainer 数据源的配置信息，从数据库中获取，由main函数加载
 var IDSContainer = make(IDSContainerType)
 
-//数据源的创建函数集合，根据名字选择合适的创建函数，创建数据源
+// iDSCreator 数据源的创建函数集合，根据名字选择合适的创建函数，创建数据源
 var iDSCreator = map[string]func(p IDSContainerParam) interface{}{
 	"CreateTableDataSource": func(p IDSContainerParam) interface{} {
 		return CreateTableDataSource(p["name"].(string), p["dbalias"].(string), p["tablename"].(string))
@@ -44,6 +48,7 @@ var iDSCreator = map[string]func(p IDSContainerParam) interface{}{
 	},
 }
 
+// CreateIDSFromParam 根据配置参数创建数据源接口,这个配置参数是保存在数据库里面的
 func CreateIDSFromParam(p IDSContainerParam) interface{} {
 	if p == nil {
 		return nil
@@ -54,10 +59,13 @@ func CreateIDSFromParam(p IDSContainerParam) interface{} {
 	}
 	return fu(p)
 }
+
+// RegisterIDSCreatorFun 注册数据源创建函数
 func RegisterIDSCreatorFun(name string, f func(p IDSContainerParam) interface{}) {
 	iDSCreator[name] = f
 }
 
+// CreateIDSFromName 根据名称返回数据源接口
 func CreateIDSFromName(name string) (interface{}, error) {
 	param, ok := IDSContainer[name]
 	if !ok {
@@ -70,6 +78,6 @@ func CreateIDSFromName(name string) (interface{}, error) {
 	return obj, nil
 }
 
-//初始化
+// init 初始化
 func init() {
 }

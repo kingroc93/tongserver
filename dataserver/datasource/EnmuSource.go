@@ -5,34 +5,34 @@ import (
 	"github.com/astaxie/beego/logs"
 )
 
-// Key-String类型的数据源
+// KeyStringSource Key-String类型的数据源
 type KeyStringSource struct {
 	DataSource
 	fields   FieldDescType
 	valueMap map[string]string
 }
 
-// 该数据源此方法无意义
+// SetRowsLimit 该数据源此方法无意义
 func (c *KeyStringSource) SetRowsLimit(limit int) {
 
 }
 
-// 该数据源此方法无意义
+// SetRowsOffset 该数据源此方法无意义
 func (c *KeyStringSource) SetRowsOffset(offset int) {
 
 }
 
-// 返回键字段
+// GetKeyFields 返回键字段
 func (c *KeyStringSource) GetKeyFields() []*MyProperty {
 	return c.KeyField
 }
 
-// 返回数据源类型
-func (c *KeyStringSource) GetDataSourceType() DataSourceType {
-	return DataSourceType_ENMU
+// GetDataSourceType 返回数据源类型
+func (c *KeyStringSource) GetDataSourceType() DSType {
+	return DataSourceTypeEnmu
 }
 
-// 通过其他数据源填充
+// FillDataByDataSource 通过其他数据源填充
 func (c *KeyStringSource) FillDataByDataSource(source IDataSource, keyfield string, valuefield string) {
 	ds, err := source.GetAllData()
 	if err != nil {
@@ -45,19 +45,19 @@ func (c *KeyStringSource) FillDataByDataSource(source IDataSource, keyfield stri
 	}
 }
 
-// 数据源初始化
+// Init 数据源初始化
 func (c *KeyStringSource) Init() error {
 	c.Field = []*MyProperty{
 		{
 			Name:          "KEY",
-			DataType:      Property_Datatype_STR,
+			DataType:      PropertyDatatypeStr,
 			OutJoin:       false,
 			Caption:       "KEY",
 			OutJoinDefine: nil,
 		},
 		{
 			Name:          "VALUE",
-			DataType:      Property_Datatype_STR,
+			DataType:      PropertyDatatypeStr,
 			OutJoin:       false,
 			Caption:       "KEY",
 			OutJoinDefine: nil,
@@ -66,23 +66,23 @@ func (c *KeyStringSource) Init() error {
 	c.KeyField = []*MyProperty{
 		{
 			Name:     "KEY",
-			DataType: Property_Datatype_STR,
+			DataType: PropertyDatatypeStr,
 		},
 	}
 	c.fields = make(FieldDescType)
 	c.fields["KEY"] = &FieldDesc{
 		Index:     0,
-		FieldType: Property_Datatype_STR,
+		FieldType: PropertyDatatypeStr,
 	}
 	c.fields["VALUE"] = &FieldDesc{
 		Index:     1,
-		FieldType: Property_Datatype_STR,
+		FieldType: PropertyDatatypeStr,
 	}
 	c.valueMap = make(map[string]string)
 	return nil
 }
 
-// 返回所有数据
+// GetAllData 返回所有数据
 func (c *KeyStringSource) GetAllData() (*DataResultSet, error) {
 	var result = &DataResultSet{}
 	result.Fields = c.fields
@@ -98,22 +98,22 @@ func (c *KeyStringSource) GetAllData() (*DataResultSet, error) {
 	return result, nil
 }
 
-// 设定key-string数据
+// SetValueMap 设定key-string数据
 func (c *KeyStringSource) SetValueMap(v map[string]string) {
 	c.valueMap = v
 }
 
-//返回key-string数据
+// GetValueMap 返回key-string数据
 func (c *KeyStringSource) GetValueMap() map[string]string {
 	return c.valueMap
 }
 
-//根据键值返回数据
+// GetDataByKey 根据键值返回数据
 func (c *KeyStringSource) GetDataByKey(key string) string {
 	return c.valueMap[key]
 }
 
-//根据键值返回数据
+// QueryDataByKey 根据键值返回数据
 func (c *KeyStringSource) QueryDataByKey(keyvalues ...interface{}) (*DataResultSet, error) {
 	var result = &DataResultSet{}
 	result.Fields = c.fields
@@ -124,7 +124,7 @@ func (c *KeyStringSource) QueryDataByKey(keyvalues ...interface{}) (*DataResultS
 	return result, nil
 }
 
-// 该数据源此方法无意义
+// QueryDataByFieldValues 该数据源此方法无意义
 func (c *KeyStringSource) QueryDataByFieldValues(fv *map[string]interface{}) (*DataResultSet, error) {
-	return nil, fmt.Errorf("Use QueryDataByKey !!")
+	return nil, fmt.Errorf("Use QueryDataByKey")
 }

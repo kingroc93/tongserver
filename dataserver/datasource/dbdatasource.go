@@ -7,7 +7,7 @@ import (
 	"tongserver.dataserver/utils"
 )
 
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// DBDataSource 数据库数据源
 type DBDataSource struct {
 	DataSource
 	TableDataSourceCriteria
@@ -21,13 +21,12 @@ type DBDataSource struct {
 	palesql  bool
 }
 
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// DataSource
-
-// 初始化
+// Init 初始化
 func (c *DataSource) Init() {
 	panic("")
 }
+
+// convertPropertys2Cols 将字段属性的数组转换为字段名的数组
 func (c *DataSource) convertPropertys2Cols(ps []*MyProperty) []string {
 	L := 0
 	for _, v := range ps {
@@ -46,22 +45,22 @@ func (c *DataSource) convertPropertys2Cols(ps []*MyProperty) []string {
 	return result
 }
 
-// 返回字段列表
+// GetFields 返回字段列表
 func (c *DataSource) GetFields() []*MyProperty {
 	return c.Field
 }
 
-// 返回数据源类型
-func (c *DataSource) GetDataSourceType() DataSourceType {
+// GetDataSourceType 返回数据源类型
+func (c *DataSource) GetDataSourceType() DSType {
 	panic("")
 }
 
-// 返回数据源名称
+// GetName 返回数据源名称
 func (c *DataSource) GetName() string {
 	return c.Name
 }
 
-// 根据名称返回主键属性
+// GetKeyFieldByName 根据名称返回主键属性
 func (c *DataSource) GetKeyFieldByName(name string) *MyProperty {
 	for _, v := range c.KeyField {
 		if v.Name == name {
@@ -71,7 +70,7 @@ func (c *DataSource) GetKeyFieldByName(name string) *MyProperty {
 	return nil
 }
 
-// 根据名称返回字段属性
+// GetFieldByName 根据名称返回字段属性
 func (c *DataSource) GetFieldByName(name string) *MyProperty {
 	for _, v := range c.Field {
 		if v.Name == name {
@@ -81,22 +80,22 @@ func (c *DataSource) GetFieldByName(name string) *MyProperty {
 	return nil
 }
 
-// 设置返回的数据条数
+// SetRowsLimit 设置返回的数据条数
 func (c *DBDataSource) SetRowsLimit(limit int) {
 	c.RowsLimit = limit
 }
 
-// 设置返回的数据条目偏移量
+// SetRowsOffset 设置返回的数据条目偏移量
 func (c *DBDataSource) SetRowsOffset(offset int) {
 	c.RowsOffset = offset
 }
 
-// 返回所有主键字段
+// GetKeyFields 返回所有主键字段
 func (c *DBDataSource) GetKeyFields() []*MyProperty {
 	return c.KeyField
 }
 
-// 将DB返回的数据转换为指定类型
+// convertData 将DB返回的数据转换为指定类型
 func (c *DBDataSource) convertData(value interface{}, fieldType string) interface{} {
 	var str utils.String
 	switch v := value.(type) {
@@ -146,18 +145,17 @@ func (c *DBDataSource) getRecordByRef(refs []interface{}, cols []string, colsTyp
 			item[i] = c.convertData(*refs[i].(*interface{}), (*colsTypes)[fieldname].FieldType)
 		}
 		return item, nil
-	} else {
-		item := make([]interface{}, len(c.Field), len(c.Field))
-		Oj := make([]*MyProperty, 0, len(c.Field))
-		for i, v := range c.Field {
-			if !v.OutJoin {
-				item[i] = c.convertData(*refs[(*colsTypes)[v.Name].Index].(*interface{}), (*colsTypes)[v.Name].FieldType)
-			} else {
-				Oj = append(Oj, v)
-			}
-		}
-		return item, Oj
 	}
+	item := make([]interface{}, len(c.Field), len(c.Field))
+	Oj := make([]*MyProperty, 0, len(c.Field))
+	for i, v := range c.Field {
+		if !v.OutJoin {
+			item[i] = c.convertData(*refs[(*colsTypes)[v.Name].Index].(*interface{}), (*colsTypes)[v.Name].FieldType)
+		} else {
+			Oj = append(Oj, v)
+		}
+	}
+	return item, Oj
 }
 
 // 根据SQL语句查询数据

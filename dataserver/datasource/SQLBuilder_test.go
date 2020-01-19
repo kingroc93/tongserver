@@ -6,7 +6,7 @@ import (
 )
 
 func TestSQLBuilder(t *testing.T) {
-	sqlbuilder, _ := CreateSQLBuileder(DBType_MySQL, "JEDA_USER")
+	sqlbuilder, _ := CreateSQLBuileder(DbTypeMySQL, "JEDA_USER")
 
 	sql, ps := sqlbuilder.CreateInsertSQLByMap(map[string]interface{}{
 		"USER_ID":       "112123",
