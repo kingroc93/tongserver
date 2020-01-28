@@ -8,6 +8,7 @@ import (
 func init() {
 	beego.Router("/jeda/menu", &JedaController{}, "get:GetMenu")
 	beego.Router("/jeda/srvs", &JedaController{}, "get:GetSrvs")
+	beego.Router("/jeda/ids", &JedaController{}, "get:GetIdsList")
 	//qrcode
 	beego.Router("/qrcode", &QrcodeController{})
 	//JWT Request

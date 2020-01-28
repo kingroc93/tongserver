@@ -25,7 +25,6 @@ func FormatDatafunc(dataset *datasource.DataResultSet, index int, params map[str
 		default:
 			dataset.Data[index][dataset.Fields[k].Index] = fmt.Sprintf(v.(string), obj)
 		}
-
 	}
 }
 

@@ -45,6 +45,29 @@ func reloadDBUrl() error {
 	}
 	return nil
 }
+func reloadIds() error {
+	ids := datasource.CreateTableDataSource("GIDS", "default", "G_IDS")
+	rs, err := ids.GetAllData()
+	if err != nil {
+		return err
+	}
+	datasource.IDSContainer = make(datasource.IDSContainerType)
+	createDefaultDataIDs()
+	for _, row := range rs.Data {
+		meta := make(map[string]interface{})
+		err := json.Unmarshal([]byte(row[rs.Fields["META"].Index].(string)), &meta)
+		if err != nil {
+			logs.Error("加载数据源的时候发生错误，%s,%s", row[rs.Fields["META"].Index], err)
+			continue
+		}
+		meta["inf"] = row[rs.Fields["INF"].Index].(string)
+		meta["dbalias"] = row[rs.Fields["DBALIAS"].Index].(string)
+		meta["name"] = row[rs.Fields["NAME"].Index].(string)
+
+		datasource.IDSContainer[meta["name"].(string)] = meta
+	}
+	return nil
+}
 func createDefaultDataIDs() error {
 	var meta map[string]interface{}
 	meta = map[string]interface{}{
@@ -59,24 +82,6 @@ func createDefaultDataIDs() error {
 		"dbalias":   "default",
 		"tablename": "G_META_ITEM"}
 	datasource.IDSContainer[meta["name"].(string)] = meta
-	return nil
-}
-func reloadIds() error {
-	ids := datasource.CreateTableDataSource("GIDS", "default", "G_IDS")
-	rs, err := ids.GetAllData()
-	if err != nil {
-		return err
-	}
-	for _, row := range rs.Data {
-		fmt.Println(row[rs.Fields["META"].Index])
-		meta := make(map[string]interface{})
-		err := json.Unmarshal([]byte(row[rs.Fields["META"].Index].(string)), &meta)
-		if err != nil {
-			logs.Error("加载数据源的时候发生错误，%s,%s", row[rs.Fields["META"].Index], err)
-			continue
-		}
-		datasource.IDSContainer[meta["name"].(string)] = meta
-	}
 	return nil
 }
 
@@ -105,9 +110,9 @@ func main() {
 			return
 		}
 	}
-	createDefaultDataIDs()
-	mgr.AddMetaFuns(reloadDBUrl)
-	mgr.AddMetaFuns(reloadIds)
+
+	mgr.AddMetaFuns("dbalias", reloadDBUrl)
+	mgr.AddMetaFuns("ids", reloadIds)
 	err := mgr.ReloadMetaData()
 	if err != nil {
 		fmt.Println(err.Error())

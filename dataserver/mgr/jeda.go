@@ -25,11 +25,11 @@ type QrcodeController struct {
 type reloadMetaFun func() error
 
 // metaFuns 用于加载元数据的函数列表
-var metaFuns = make([]reloadMetaFun, 0, 10)
+var metaFuns = make(map[string]reloadMetaFun)
 
 // AddMetaFuns 添加加载元数据的函数句柄
-func AddMetaFuns(f reloadMetaFun) {
-	metaFuns = append(metaFuns, f)
+func AddMetaFuns(name string, f reloadMetaFun) {
+	metaFuns[name] = f
 }
 
 // Get 生成二维码
@@ -78,12 +78,86 @@ func (c *JedaController) ReloadMetaData() {
 	c.ServeJSON()
 }
 
+// commonCheckGetSrvList commonCheckGetSrvList
+func (c *JedaController) commonCheckGetSrvList() bool {
+	f := metaFuns["ids"]
+	if f == nil {
+		r := service.CreateRestResult(false)
+		r["msg"] = "没有找到名称为ids的元数据加载函数"
+		c.Data["json"] = r
+		c.ServeJSON()
+		return true
+	}
+	err := f()
+	if err != nil {
+		r := service.CreateRestResult(false)
+		r["msg"] = err.Error()
+		c.Data["json"] = r
+		c.ServeJSON()
+		return true
+	}
+	return false
+}
+
+// GetIdsList 返回数据源列表
+func (c *JedaController) GetIdsList() {
+	if c.commonCheckGetSrvList() {
+		return
+	}
+	ids := datasource.IDSContainer
+	var result = &datasource.DataResultSet{}
+	result.Fields = make(datasource.FieldDescType)
+	result.Fields["ID"] = &datasource.FieldDesc{
+		FieldType: datasource.PropertyDatatypeStr,
+		Index:     0,
+		Meta:      &map[string]string{"CAP": "编号"}}
+	result.Fields["IdsName"] = &datasource.FieldDesc{
+		FieldType: datasource.PropertyDatatypeStr,
+		Index:     1,
+		Meta:      &map[string]string{"CAP": "数据源名称"}}
+	result.Fields["TableName"] = &datasource.FieldDesc{
+		FieldType: datasource.PropertyDatatypeStr,
+		Index:     2,
+		Meta:      &map[string]string{"CAP": "表名"}}
+	result.Fields["DbAlias"] = &datasource.FieldDesc{
+		FieldType: datasource.PropertyDatatypeStr,
+		Index:     3,
+		Meta:      &map[string]string{"CAP": "数据库别名"}}
+
+	result.Fields["Writeable"] = &datasource.FieldDesc{
+		FieldType: datasource.PropertyDatatypeStr,
+		Index:     4,
+		Meta:      &map[string]string{"CAP": "是够可写"}}
+	result.Data = make([][]interface{}, 0, len(ids))
+	for k, v := range ids {
+		if v["inf"].(string) != "CreateTableDataSource" && v["inf"].(string) != "CreateWriteableTableDataSource" {
+			continue
+		}
+		row := make([]interface{}, 5, 5)
+		row[0] = k
+		row[1] = v["name"].(string)
+		row[2] = v["tablename"].(string)
+		row[3] = v["dbalias"].(string)
+		if v["inf"].(string) != "CreateWriteableTableDataSource" {
+			row[4] = "true"
+		}
+		if v["inf"].(string) != "CreateTableDataSource" {
+			row[4] = "true"
+		}
+		result.Data = append(result.Data, row)
+	}
+	r := service.CreateRestResult(true)
+	r["resultset"] = result
+	c.Data["json"] = r
+	c.ServeJSON()
+}
+
 // GetUsers 返回用户列表
 func (c *JedaController) GetUsers() {
 
 }
 
-// GetMenu 范湖菜单信息
+// GetMenu 返回菜单信息
 func (c *JedaController) GetMenu() {
 	var maps []orm.Params
 	o := orm.NewOrm()
