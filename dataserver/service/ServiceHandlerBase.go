@@ -78,7 +78,7 @@ func (c *SHandlerBase) setResultSet(ds *datasource.DataResultSet) {
 		r["resultset"] = ds
 	}
 
-	if c.Ctl.Input().Get(RequestParamCache) != "" {
+	if c.Ctl.Input().Get(RequestParamCache /**_cache**/) != "" {
 		// 处理缓存请求 [缓存时间]_[最大请求次数]  10_1  缓存的结果集请求一次即删除，
 		// 最长保存10秒钟，“缓存时间”为0时表示使用系统定义的默认缓存时间，为30s
 		// 缓存的结果集随时都有可能消失

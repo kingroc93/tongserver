@@ -534,7 +534,7 @@ func (c *IDSServiceHandler) doPostAction(dataSet *datasource.DataResultSet, rBod
 // 处理查询报文
 func (c *IDSServiceHandler) doQuery(sdef *SDefine, ids datasource.IDataSource, rBody *SRequestBody) {
 	if rBody == nil {
-		c.doAllData(sdef, ids, rBody)
+		c.createErrorResponse("query操作必须POST方式提交rbody信息")
 		return
 	}
 	c.setPageParams(ids)
@@ -684,6 +684,7 @@ func (c *IDSServiceHandler) doGetCache(sdef *SDefine, ids datasource.IDataSource
 	if times > 0 {
 		times = times - 1
 	}
+	r["cachetimes"] = times
 	if times == 0 {
 		err := utils.DataSetResultCache.Delete(key)
 		if err != nil {
@@ -693,7 +694,7 @@ func (c *IDSServiceHandler) doGetCache(sdef *SDefine, ids datasource.IDataSource
 			return
 		}
 	} else {
-		r["cachetimes"] = times
+
 		err := utils.DataSetResultCache.Put(key, obj, time.Duration(d)*time.Second)
 		if err != nil {
 			r["result"] = false
@@ -702,10 +703,24 @@ func (c *IDSServiceHandler) doGetCache(sdef *SDefine, ids datasource.IDataSource
 			return
 		}
 	}
+
+	dst, ok := r["resultset"]
+	if ok {
+		ds, ok := dst.(*datasource.DataResultSet)
+		if ok {
+			resuleset, err := c.doPostAction(c.DoBulldozer(ds, rBody.Bulldozer), rBody)
+			if err != nil {
+				c.createErrorResponseByError(err)
+				c.ServeJSON()
+			}
+			c.setResultSet(resuleset)
+			c.ServeJSON()
+			return
+		}
+	}
 	r["result"] = true
 	c.Ctl.Data["json"] = r
 	c.ServeJSON()
-
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////

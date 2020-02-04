@@ -124,7 +124,7 @@ type IDataSource interface {
 * 数据字典映射 **√**
 * 列提取 **√**
 * 数据集拼接
-* 数据集缓存
+* 数据集缓存**√**
 
 ## 数据服务
 * 基于TableDataSource类的服务  **√**
@@ -275,7 +275,7 @@ type IDataSource interface {
 ### 基础统计图
 
 
- 
+
 ```json
 {
   "Criteria": [
