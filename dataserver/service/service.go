@@ -5,7 +5,6 @@ import (
 	"github.com/astaxie/beego"
 	"strings"
 	"tongserver.dataserver/datasource"
-	"tongserver.dataserver/utils"
 )
 
 const (
@@ -37,6 +36,8 @@ type SDefine struct {
 	MsgLog bool
 	// Security 是否开启安全认证
 	Security bool
+	// 项目id
+	ProjectId string
 }
 
 // SDefineContainerType 服务定义类型
@@ -89,7 +90,8 @@ func (c *SController) reloadSrvMetaFromDatabase(cnt string) (*SDefine, error) {
 		Enabled:     rs.Data[0][rs.Fields["ENABLED"].Index].(int32) == 1,
 		MsgLog:      rs.Data[0][rs.Fields["MSGLOG"].Index].(int32) == 1,
 		Security:    rs.Data[0][rs.Fields["SECURITY"].Index].(int32) == 1,
-		Meta:        rs.Data[0][rs.Fields["META"].Index].(string)}
+		Meta:        rs.Data[0][rs.Fields["META"].Index].(string),
+		ProjectId:   rs.Data[0][rs.Fields["PROJECTID"].Index].(string)}
 	SDefineContainer[cnt] = srv
 	return srv, nil
 }
@@ -118,21 +120,18 @@ func (c *SController) DoSrv() {
 	}
 	if sdef.Security {
 		// 处理访问控制
-		ok, rs, err := VerifyToken(&c.Controller)
+		err := VerifyToken(&c.Controller)
 		if err != nil {
 			r := CreateRestResult(false)
 			r["msg"] = err.Error()
 			c.Data["json"] = r
 			c.ServeJSON()
-		}
-		if !ok {
+		} else {
 			r := CreateRestResult(false)
 			r["msg"] = "access denined"
 			c.Data["json"] = r
 			c.ServeJSON()
 		}
-		js, _ := ConvertJSON(rs)
-		c.Ctx.ResponseWriter.Header().Add("token", utils.EncodeURLBase64(js)+"."+utils.GetHmacCode(js, HASHSECRET))
 	}
 	handler, ok := SHandlerContainer[sdef.ServiceType]
 	if !ok {

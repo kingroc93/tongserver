@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/astaxie/beego"
+	"github.com/astaxie/beego/context"
 	"github.com/astaxie/beego/orm"
 	"github.com/rs/xid"
 	"strings"
@@ -23,31 +24,37 @@ type SecurityController struct {
 	beego.Controller
 }
 
-// VerifyToken 验证令牌是否合法，从beego控制器中获取令牌信息
-func VerifyToken(c *beego.Controller) (bool, RestResult, error) {
-	authString := c.Ctx.Input.Header("Authorization")
+func VerifyTokenCtx(ctx *context.Context) error {
+	authString := ctx.Input.Header("Authorization")
 	if authString == "" {
-		return false, nil, fmt.Errorf("invalid Authorization in request header")
+		return fmt.Errorf("invalid Authorization in request header")
 	}
 	ss := strings.Split(authString, ".")
 	if len(ss) != 2 {
-		return false, nil, fmt.Errorf("invalid Authorization in request header")
+		return fmt.Errorf("invalid Authorization in request header")
 	}
 	js := utils.DecodeURLBase64(ss[0])
 	if utils.GetHmacCode(js, HASHSECRET) != ss[1] {
-		return false, nil, nil
+		return fmt.Errorf("invalid Authorization in request header")
 	}
 	m := make(map[string]interface{})
 	err := json.Unmarshal([]byte(js), &m)
 	if err != nil {
-		return false, nil, nil
+		return fmt.Errorf("invalid Authorization in request header")
 	}
 	n := time.Now().UnixNano()
 	if n-int64(m["time"].(float64)) > TokenExpire*1e9 {
-		return false, nil, nil
+		return fmt.Errorf("invalid Authorization in request header")
 	}
 	m["time"] = time.Now().UnixNano()
-	return true, m, nil
+	jss, _ := ConvertJSON(m)
+	ctx.ResponseWriter.Header().Add("token", utils.EncodeURLBase64(jss)+"."+utils.GetHmacCode(js, HASHSECRET))
+	return nil
+}
+
+// VerifyToken 验证令牌是否合法，从beego控制器中获取令牌信息
+func VerifyToken(c *beego.Controller) error {
+	return VerifyTokenCtx(c.Ctx)
 }
 
 // ConvertJSON 装换为Json格式字符串
@@ -70,26 +77,15 @@ func ConvertJSON(data interface{}, encoding ...bool) (string, error) {
 
 // VerifyToken 验证令牌是否合法的web api
 func (c *SecurityController) VerifyToken() {
-	r, rm, err := VerifyToken(&c.Controller)
+	err := VerifyToken(&c.Controller)
 	if err != nil {
 		r := CreateRestResult(false)
 		r["msg"] = err.Error()
-		c.Data["json"] = r
+		c.Data["json"] = false
 		c.ServeJSON()
 		return
 	}
-	result := CreateRestResult(r)
-	if r {
-		js, err := ConvertJSON(rm)
-		if err != nil {
-			r := CreateRestResult(true)
-			r["msg"] = "认证成功但令牌未刷新" + err.Error()
-			c.Data["json"] = r
-			c.ServeJSON()
-			return
-		}
-		result["token"] = utils.EncodeURLBase64(js) + "." + utils.GetHmacCode(js, HASHSECRET)
-	}
+	result := CreateRestResult(true)
 	c.Data["json"] = result
 	c.ServeJSON()
 }

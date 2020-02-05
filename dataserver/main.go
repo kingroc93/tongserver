@@ -63,8 +63,9 @@ func reloadIds() error {
 		meta["inf"] = row[rs.Fields["INF"].Index].(string)
 		meta["dbalias"] = row[rs.Fields["DBALIAS"].Index].(string)
 		meta["name"] = row[rs.Fields["NAME"].Index].(string)
+		meta["projectid"] = row[rs.Fields["PROJECTID"].Index].(string)
 
-		datasource.IDSContainer[meta["name"].(string)] = meta
+		datasource.IDSContainer[meta["projectid"].(string)+"."+meta["name"].(string)] = meta
 	}
 	return nil
 }

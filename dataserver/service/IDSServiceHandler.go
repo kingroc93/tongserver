@@ -725,6 +725,7 @@ func (c *IDSServiceHandler) doGetCache(sdef *SDefine, ids datasource.IDataSource
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 返回当前类支持的动作类型,以及动作对应的操作函数
+// 该方法由 func (c *IDSServiceHandler) DoSrv(sdef *SDefine, inf SHandlerInterface)方法调用
 func (c *IDSServiceHandler) getActionMap() map[string]SerivceActionHandler {
 	return map[string]SerivceActionHandler{
 		SrvActionMETA:    c.doGetMeta,
@@ -779,21 +780,26 @@ func (c *IDSServiceHandler) getRBody() *SRequestBody {
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 根据元数据返回处理服务的接口
-func (c *IDSServiceHandler) getServiceInterface(metestr string) (interface{}, error) {
+func (c *IDSServiceHandler) getServiceInterface(sdef *SDefine) (interface{}, error) {
+	metestr := sdef.Meta
 	meta := make(map[string]interface{})
 	err2 := json.Unmarshal([]byte(metestr), &meta)
 	if err2 != nil {
 		return nil, fmt.Errorf("meta信息不正确,应为JSON格式")
 	}
-	return datasource.CreateIDSFromName(meta["ids"].(string))
+	idstr := meta["ids"].(string)
+	if strings.Index(idstr, ".") == -1 {
+		idstr = sdef.ProjectId + "." + idstr
+	}
+	return datasource.CreateIDSFromName(idstr)
 }
 
 // DoSrv 处理服务请求的入口
 func (c *IDSServiceHandler) DoSrv(sdef *SDefine, inf SHandlerInterface) {
-	metestr := sdef.Meta
+
 	//////////////////////////////////////////////////////////////////////////
 	//调用传入的接口中的方法实现下面的功能,因为需要通过不同的接口实现来实现不同的行为
-	obj, err := inf.getServiceInterface(metestr)
+	obj, err := inf.getServiceInterface(sdef)
 	if err != nil {
 		c.createErrorResponseByError(err)
 		return

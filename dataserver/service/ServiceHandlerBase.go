@@ -20,7 +20,7 @@ type SHandlerInterface interface {
 	//返回请求报文，GET方法没有报文，只处理POST方法的报文
 	getRBody() *SRequestBody
 	//根据元数据返回当前实例处理请求的数据源类，比如TableDataSource
-	getServiceInterface(metestr string) (interface{}, error)
+	getServiceInterface(sdef *SDefine) (interface{}, error)
 }
 
 // SerivceActionHandler 处理请求的方法类型

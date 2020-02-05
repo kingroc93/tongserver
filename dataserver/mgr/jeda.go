@@ -51,6 +51,7 @@ func (c *QrcodeController) Get() {
 
 // GetSrvs 返回所有服务
 func (c *JedaController) GetSrvs() {
+
 	c.Data["json"] = datasource.IDSContainer
 	c.ServeJSON()
 }
@@ -68,7 +69,15 @@ func ReloadMetaData() error {
 
 // ReloadMetaData 重新加载元数据
 func (c *JedaController) ReloadMetaData() {
-	err := ReloadMetaData()
+	err := service.VerifyToken(&c.Controller)
+	if err != nil {
+		r := service.CreateRestResult(false)
+		r["msg"] = err.Error()
+		c.Data["json"] = r
+		c.ServeJSON()
+		return
+	}
+	err = ReloadMetaData()
 	if err != nil {
 		logs.Debug("加载系统元数据时发生错误,%v", err.Error())
 		service.CreateErrorResponseByError(err, &c.Controller)
@@ -101,6 +110,14 @@ func (c *JedaController) commonCheckGetSrvList() bool {
 
 // GetIdsList 返回数据源列表
 func (c *JedaController) GetIdsList() {
+	err := service.VerifyToken(&c.Controller)
+	if err != nil {
+		r := service.CreateRestResult(false)
+		r["msg"] = err.Error()
+		c.Data["json"] = r
+		c.ServeJSON()
+		return
+	}
 	if c.commonCheckGetSrvList() {
 		return
 	}
@@ -159,6 +176,14 @@ func (c *JedaController) GetUsers() {
 
 // GetMenu 返回菜单信息
 func (c *JedaController) GetMenu() {
+	err := service.VerifyToken(&c.Controller)
+	if err != nil {
+		r := service.CreateRestResult(false)
+		r["msg"] = err.Error()
+		c.Data["json"] = r
+		c.ServeJSON()
+		return
+	}
 	var maps []orm.Params
 	o := orm.NewOrm()
 	pid := c.Input().Get("pid")

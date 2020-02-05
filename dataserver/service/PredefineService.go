@@ -77,7 +77,7 @@ func (c *PredefineServiceHandler) getRBody() *SRequestBody {
 }
 
 // getServiceInterface 返回该服务需要的数据源接口
-func (c *PredefineServiceHandler) getServiceInterface(metestr string) (interface{}, error) {
+func (c *PredefineServiceHandler) getServiceInterface(sdef *SDefine) (interface{}, error) {
 	if c.predefine.Definetype == "ids" {
 		param := datasource.IDSContainer[c.predefine.Ids]
 		obj := datasource.CreateIDSFromParam(param)
