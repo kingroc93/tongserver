@@ -13,7 +13,7 @@ func init() {
 	//qrcode
 	beego.Router("/qrcode", &QrcodeController{})
 	//JWT Request
-	beego.Router("/token/verify", &service.SecurityController{}, "post:VerifyToken")
-	beego.Router("/token/create", &service.SecurityController{}, "post:CreateToken")
+	beego.Router("/jeda/token/verify", &service.SecurityController{}, "post:VerifyToken")
+	beego.Router("/jeda/token/create", &service.SecurityController{}, "post:CreateToken")
 
 }

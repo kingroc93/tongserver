@@ -113,8 +113,23 @@ func (c *SecurityController) checkPwd(u string, p string) bool {
 
 // CreateToken 创建令牌
 func (c *SecurityController) CreateToken() {
-	uname := c.Input().Get("u")
-	pwd := c.Input().Get("p")
+	uname := c.Input().Get("LoginName")
+	pwd := c.Input().Get("Password")
+	if uname == "" && pwd == "" {
+		//尝试通过RequestBody获取
+		rbody := &struct {
+			LoginName string
+			Password  string
+		}{}
+		err := json.Unmarshal([]byte(c.Ctx.Input.RequestBody), rbody)
+		if err != nil {
+			c.Data["json"] = CreateRestResult(false)
+			c.ServeJSON()
+			return
+		}
+		uname = rbody.LoginName
+		pwd = rbody.Password
+	}
 	if !c.checkPwd(uname, pwd) {
 		c.Data["json"] = CreateRestResult(false)
 	} else {
