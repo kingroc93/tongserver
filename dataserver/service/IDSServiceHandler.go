@@ -236,6 +236,12 @@ func (c *IDSServiceHandler) doAllData(sdef *SDefine, ids datasource.IDataSource,
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 参数转换，将string的参数转换为指定的类型，针对日期类型特殊处理：
 // 如前N天，lastday:1    lastday:-3
+// addmonth
+// addyear
+// now
+// thismonth
+// thisyear
+// today
 func (c *IDSServiceHandler) convertParamValues(value string, datatype string) (interface{}, error) {
 	//特殊处理日期类型
 	if datatype == datasource.PropertyDatatypeTime || datatype == datasource.PropertyDatatypeDate {

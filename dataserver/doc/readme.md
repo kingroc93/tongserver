@@ -240,6 +240,26 @@ type IDataSource interface {
 
 
 
+> **特殊处理时间类型的参数，当条件的属性类型为时间时可以使用特殊字符串表示特定的时间，包括：**
+>
+> 如前N天，lastday:1    lastday:-3
+> addmonth,addmonth:1
+> addyear
+> now
+> thismonth
+> thisyear
+> today
+
+
+
+
+
+>  在当前请求的URL中添加参数**_cache**，可以在返回结果的同时将当前结果集保存在服务器端的缓存中，参数 格式为：30_1   其中30表示缓存30s，1表示最多被返回一次。
+
+
+
+
+
 ### get操作
 
 

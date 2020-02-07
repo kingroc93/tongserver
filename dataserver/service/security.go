@@ -81,7 +81,7 @@ func (c *SecurityController) VerifyToken() {
 	if err != nil {
 		r := CreateRestResult(false)
 		r["msg"] = err.Error()
-		c.Data["json"] = false
+		c.Data["json"] = r
 		c.ServeJSON()
 		return
 	}
