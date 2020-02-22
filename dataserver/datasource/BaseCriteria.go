@@ -20,6 +20,7 @@ func (c *BaseCriteria) addCriteria(propertyname, operation, complex string, valu
 		Value:        value,
 		Complex:      complex,
 	})
+
 	return c
 }
 

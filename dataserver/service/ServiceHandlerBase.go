@@ -1,6 +1,8 @@
 package service
 
 import (
+	"encoding/json"
+	"fmt"
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/orm"
 	"github.com/satori/go.uuid"
@@ -8,6 +10,7 @@ import (
 	"strings"
 	"time"
 	"tongserver.dataserver/datasource"
+	"tongserver.dataserver/mgr"
 	"tongserver.dataserver/utils"
 )
 
@@ -46,44 +49,180 @@ func HasRightService(user string, serviceid string) (bool, error) {
 	return true, nil
 }
 
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// 根据元数据返回处理服务的接口
+func (c *SHandlerBase) getServiceInterface(sdef *SDefine) (interface{}, error) {
+	metestr := sdef.Meta
+	meta := make(map[string]interface{})
+	err2 := json.Unmarshal([]byte(metestr), &meta)
+	if err2 != nil {
+		return nil, fmt.Errorf("meta信息不正确,应为JSON格式")
+	}
+	idstr := meta["ids"].(string)
+
+	if strings.Index(idstr, ".") == -1 {
+		idstr = sdef.ProjectId + "." + idstr
+	}
+	return datasource.CreateIDSFromName(idstr)
+}
+
+// DoSrv 处理服务请求的入口
+func (c *SHandlerBase) DoSrv(sdef *SDefine, inf SHandlerInterface) {
+
+	//////////////////////////////////////////////////////////////////////////
+	//调用传入的接口中的方法实现下面的功能,因为需要通过不同的接口实现来实现不同的行为
+	obj, err := inf.getServiceInterface(sdef)
+	if err != nil {
+		c.createErrorResponseByError(err)
+		return
+	}
+	rBody := inf.getRBody()
+	//////////////////////////////////////////////////////////////////////////
+	ids, ok := obj.(datasource.IDataSource)
+	if !ok {
+		c.createErrorResponse("请求的服务没有实现IDataSource接口")
+		return
+	}
+	act := c.Ctl.Ctx.Input.Param(":action")
+	amap := inf.getActionMap()
+	f, ok := amap[act]
+	if !ok {
+		c.createErrorResponse("请求的动作当前服务没有实现")
+		return
+	}
+	f(sdef, ids, rBody)
+}
+
+func (c *SHandlerBase) getActionMap() map[string]SerivceActionHandler {
+	return map[string]SerivceActionHandler{
+		SrvActionMETA:  c.doGetMeta,
+		SrvActionCACHE: c.doGetCache,
+	}
+}
+
 // createErrorResponse 设定失败结果
 func (c *SHandlerBase) createErrorResponse(msg string) {
-	CreateErrorResponse(msg, c.Ctl)
+	mgr.CreateErrorResponse(msg, c.Ctl)
+}
+
+func (c *SHandlerBase) getCache(sdef *SDefine, ids datasource.IDataSource, rBody *SRequestBody) (*mgr.RestResult, error) {
+	key := c.Ctl.Input().Get(RequestParamCachebykey)
+	if key == "" {
+		return nil, fmt.Errorf(RequestParamCachebykey + "不得为空")
+	}
+	obj := utils.DataSetResultCache.Get(key)
+	if obj == nil {
+		return nil, fmt.Errorf("没有找到请求的缓存信息")
+	}
+	r, ok := obj.(mgr.RestResult)
+	if !ok {
+		return nil, fmt.Errorf("缓存对象类型非法")
+	}
+	times := r["cachetimes"].(int)
+	d := r["duration"].(int)
+	if times > 0 {
+		times = times - 1
+	}
+	r["cachetimes"] = times
+	if times == 0 {
+		err := utils.DataSetResultCache.Delete(key)
+		if err != nil {
+			r["result"] = false
+			r["msg"] = "删除缓存时发生错误：" + err.Error()
+			return &r, fmt.Errorf("删除缓存时发生错误：" + err.Error())
+		}
+	} else {
+		err := utils.DataSetResultCache.Put(key, obj, time.Duration(d)*time.Second)
+		if err != nil {
+			r["result"] = false
+			r["msg"] = "加入缓存时发生错误：" + err.Error()
+			c.Ctl.Data["json"] = r
+			return &r, fmt.Errorf("加入缓存时发生错误：" + err.Error())
+		}
+	}
+	return &r, nil
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// 返回缓存的结果数据
+func (c *SHandlerBase) doGetCache(sdef *SDefine, ids datasource.IDataSource, rBody *SRequestBody) {
+	r, err := c.getCache(sdef, ids, rBody)
+	if r != nil {
+		(*r)["result"] = true
+	}
+	if err != nil {
+		(*r)["msg"] = err.Error()
+	}
+	c.Ctl.Data["json"] = r
+	c.ServeJSON()
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// 返回服务元数据
+func (c *SHandlerBase) doGetMeta(sdef *SDefine, ids datasource.IDataSource, rBody *SRequestBody) {
+	r := mgr.CreateRestResult(true)
+	sd := make(map[string]interface{})
+	r["servicedefine"] = sd
+	sd["Context"] = sdef.Context
+	sd["BodyType"] = sdef.BodyType
+	sd["ServiceType"] = sdef.ServiceType
+	sd["Namespace"] = sdef.Namespace
+	sd["Enabled"] = sdef.Enabled
+	sd["MsgLog"] = sdef.MsgLog
+	sd["Security"] = sdef.Security
+	meta := make(map[string]interface{})
+	err2 := json.Unmarshal([]byte(sdef.Meta), &meta)
+	if err2 == nil {
+		sd["Meta"] = meta
+	} else {
+		sd["Meta"] = sdef.Meta
+	}
+
+	imp := []string{"IDataSource"}
+	if _, ok := ids.(datasource.ICriteriaDataSource); ok {
+		imp = append(imp, "ICriteriaDataSource")
+	}
+	if _, ok := ids.(datasource.IFilterAdder); ok {
+		imp = append(imp, "IFilterAdder")
+	}
+	if _, ok := ids.(datasource.IAggregativeAdder); ok {
+		imp = append(imp, "IAggregativeAdder")
+	}
+	if _, ok := ids.(datasource.IWriteableDataSource); ok {
+		imp = append(imp, "IWriteableDataSource")
+	}
+	r["ids"] = imp
+
+	c.Ctl.Data["json"] = r
+	c.ServeJSON()
 }
 
 // createErrorResponseByError 根据error设定失败结果
 func (c *SHandlerBase) createErrorResponseByError(err error) {
-	CreateErrorResponseByError(err, c.Ctl)
+	mgr.CreateErrorResponseByError(err, c.Ctl)
 }
 
 // createErrorResult 设定失败结果
 func (c *SHandlerBase) createErrorResult(msg string) {
-	CreateErrorResponse(msg, c.Ctl)
+	mgr.CreateErrorResponse(msg, c.Ctl)
 }
 
 // setResult 设定请求成功的返回结果
 func (c *SHandlerBase) setResult(msg string) {
-	r := CreateRestResult(true)
+	r := mgr.CreateRestResult(true)
 	r["msg"] = msg
 	c.Ctl.Data["json"] = r
 }
 
 // setResultSet 设定结果集
 func (c *SHandlerBase) setResultSet(ds *datasource.DataResultSet) {
-
-	r := CreateRestResult(true)
-	if c.Ctl.Input().Get(RequestParamNofieldsinfo) != "" {
-		r["data"] = ds.Data
-	} else {
-		r["resultset"] = ds
-	}
-
 	if c.Ctl.Input().Get(RequestParamCache /**_cache**/) != "" {
 		// 处理缓存请求 [缓存时间]_[最大请求次数]  10_1  缓存的结果集请求一次即删除，
 		// 最长保存10秒钟，“缓存时间”为0时表示使用系统定义的默认缓存时间，为30s
 		// 缓存的结果集随时都有可能消失
 		cs := c.Ctl.Input().Get(RequestParamCache)
 		css := strings.Split(cs, "_")
+		r := mgr.CreateRestResult(true)
 		if len(css) != 2 {
 			r["result"] = false
 			r["msg"] = "缓存参数" + RequestParamCache + "必须为 [缓存时间]_[最大请求次数] 的形式"
@@ -128,8 +267,35 @@ func (c *SHandlerBase) setResultSet(ds *datasource.DataResultSet) {
 			c.Ctl.Data["json"] = r
 			return
 		}
+		c.Ctl.Data["json"] = r
+		return
 	}
-
+	r := mgr.CreateRestResult(true)
+	if c.Ctl.Input().Get(ResponseStyle) != "map" {
+		if c.Ctl.Input().Get(RequestParamNofieldsinfo) != "" {
+			r["data"] = ds.Data
+		} else {
+			r["resultset"] = ds
+		}
+	} else {
+		result := make([]map[string]interface{}, len(ds.Data), len(ds.Data))
+		for i, d := range ds.Data {
+			item := make(map[string]interface{})
+			for k, v := range ds.Fields {
+				item[k] = d[v.Index]
+			}
+			result[i] = item
+		}
+		if c.Ctl.Input().Get(RequestParamNofieldsinfo) != "" {
+			r["data"] = result
+		} else {
+			rsd := make(map[string]interface{})
+			rsd["Fields"] = ds.Fields
+			rsd["Data"] = result
+			rsd["Meta"] = ds.Meta
+			r["resultset"] = rsd
+		}
+	}
 	c.Ctl.Data["json"] = r
 }
 

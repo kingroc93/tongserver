@@ -103,6 +103,21 @@ type MySQLSQLBuileder struct {
 	SQLBuilder
 }
 
+// CreateSQLBuileder2ObjectTable 创建SQL构造器
+func CreateSQLBuileder2ObjectTable(dbType string, objectTable string, columns []string, orderby []string, rowslimit int, rowsoffset int) (ISQLBuilder, error) {
+	switch dbType {
+	case DbTypeMySQL:
+		return &MySQLSQLBuileder{
+			SQLBuilder: SQLBuilder{
+				objectTable: objectTable,
+				columns:     columns,
+				orderBy:     orderby,
+				rowsLimit:   rowslimit,
+				rowsOffset:  rowsoffset}}, nil
+	}
+	return nil, fmt.Errorf("不支持的数据库类型" + dbType)
+}
+
 // CreateSQLBuileder2 创建SQL构造器
 func CreateSQLBuileder2(dbType string, tablename string, columns []string, orderby []string, rowslimit int, rowsoffset int) (ISQLBuilder, error) {
 	switch dbType {
@@ -164,10 +179,10 @@ func (c *MySQLSQLBuileder) AddAggre(outfield string, aggreType *AggreType) {
 // AddCriteria 删除条件
 func (c *MySQLSQLBuileder) AddCriteria(field, operation, complex string, value interface{}) ISQLBuilder {
 	mu.Lock()
+	defer mu.Unlock()
 	if c.criteria == nil {
 		c.criteria = make([]SQLCriteria, 0, 10)
 	}
-	mu.Unlock()
 	c.criteria = append(c.criteria, SQLCriteria{
 		PropertyName: field,
 		Operation:    operation,

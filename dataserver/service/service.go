@@ -5,6 +5,7 @@ import (
 	"github.com/astaxie/beego"
 	"strings"
 	"tongserver.dataserver/datasource"
+	"tongserver.dataserver/mgr"
 )
 
 const (
@@ -12,8 +13,8 @@ const (
 	SrvTypeIds string = "IDS"
 	// SrvTypePredef 预定义服务
 	SrvTypePredef string = "PREDEF"
-	// SrvTypeEnmu 基于RnmuSource类的服务
-	SrvTypeEnmu string = "ENMU"
+	// SrvValueKey value-key形式的服务
+	SrvValueKey string = "VK"
 	// SrvTypeSrvflow 基于服务流程的服务
 	SrvTypeSrvflow string = "SRVFLOW"
 )
@@ -105,14 +106,14 @@ func (c *SController) DoSrv() {
 	//默认是从数据库获取
 	sdef, err := c.reloadSrvMetaFromDatabase(cnt)
 	if err != nil {
-		r := CreateRestResult(false)
+		r := mgr.CreateRestResult(false)
 		r["msg"] = err.Error()
 		c.Data["json"] = r
 		c.ServeJSON()
 		return
 	}
 	if !sdef.Enabled {
-		r := CreateRestResult(false)
+		r := mgr.CreateRestResult(false)
 		r["msg"] = "请求的服务未启用"
 		c.Data["json"] = r
 		c.ServeJSON()
@@ -120,14 +121,15 @@ func (c *SController) DoSrv() {
 	}
 	if sdef.Security {
 		// 处理访问控制
-		err := VerifyToken(&c.Controller)
+
+		_, err := mgr.GetTokenServiceInstance().VerifyToken(&c.Controller)
 		if err != nil {
-			r := CreateRestResult(false)
+			r := mgr.CreateRestResult(false)
 			r["msg"] = err.Error()
 			c.Data["json"] = r
 			c.ServeJSON()
 		} else {
-			r := CreateRestResult(false)
+			r := mgr.CreateRestResult(false)
 			r["msg"] = "access denined"
 			c.Data["json"] = r
 			c.ServeJSON()
@@ -135,7 +137,7 @@ func (c *SController) DoSrv() {
 	}
 	handler, ok := SHandlerContainer[sdef.ServiceType]
 	if !ok {
-		r := CreateRestResult(false)
+		r := mgr.CreateRestResult(false)
 		r["msg"] = "没有找到" + sdef.ServiceType + "定义的服务接口处理程序"
 		c.Data["json"] = r
 		c.ServeJSON()
@@ -152,5 +154,8 @@ func init() {
 	}
 	SHandlerContainer[SrvTypePredef] = func(c *beego.Controller) SHandlerInterface {
 		return &PredefineServiceHandler{IDSServiceHandler: IDSServiceHandler{SHandlerBase{Ctl: c}}}
+	}
+	SHandlerContainer[SrvValueKey] = func(c *beego.Controller) SHandlerInterface {
+		return &ValueKeyService{SHandlerBase{Ctl: c}}
 	}
 }

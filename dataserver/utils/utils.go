@@ -1,6 +1,8 @@
 package utils
 
 import (
+	"encoding/json"
+	"github.com/astaxie/beego"
 	"math/big"
 	"strconv"
 	"time"
@@ -225,4 +227,22 @@ func (list *ArrayList) Contains(value interface{}) (bool, int) {
 		}
 	}
 	return false, -1
+}
+
+// ConvertJSON 装换为Json格式字符串
+func ConvertJSON(data interface{}, encoding ...bool) (string, error) {
+	var (
+		hasIndent = beego.BConfig.RunMode != beego.PROD
+		content   []byte
+		err       error
+	)
+	if hasIndent {
+		content, err = json.MarshalIndent(data, "", "  ")
+	} else {
+		content, err = json.Marshal(data)
+	}
+	if err != nil {
+		return "", err
+	}
+	return string(content), nil
 }

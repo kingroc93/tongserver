@@ -4,16 +4,6 @@ import (
 	"github.com/astaxie/beego"
 )
 
-// RestResult 请求返回的数据类型
-type RestResult map[string]interface{}
-
-// CreateRestResult 创建返回数据实例
-func CreateRestResult(success bool) RestResult {
-	var result = make(RestResult)
-	result["result"] = success
-	return result
-}
-
 // CommonParamsType 请求的通用参数
 type CommonParamsType struct {
 	Name   string

@@ -9,7 +9,7 @@ import (
 	"time"
 	"tongserver.dataserver/cube"
 	"tongserver.dataserver/datasource"
-	"tongserver.dataserver/utils"
+	"tongserver.dataserver/mgr"
 )
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -40,6 +40,8 @@ const (
 	RequestParamPageindex string = "_pageindex"
 	//是否返回字段元数据，默认为返回
 	RequestParamNofieldsinfo string = "_nofield"
+	// 响应的风格，默认是数组风格array，可以设定为map风格
+	ResponseStyle string = "_repstyle"
 	//当前请求不执行而是只返回SQL语句，仅针对IDS类型的服务有效
 	RequestParamSQL string = "_sql"
 	//当前请求的响应信息不直接返回
@@ -49,6 +51,8 @@ const (
 )
 
 // IDSServiceHandler 数据源服务处理句柄
+// IDS数据源服务支持主键查询、条件查询、排序、数据后处理、逐行行处理等
+// IWriteableDataSource接口的数据源支持数据的添加删除修改
 type IDSServiceHandler struct {
 	SHandlerBase
 }
@@ -75,6 +79,38 @@ func (c *IDSServiceHandler) doBulldozer(dataSet *datasource.DataResultSet, index
 	case "ColumnFilterFunc":
 		cube.ColumnFilterFunc(dataSet, index, param)
 	}
+}
+
+func (c *IDSServiceHandler) getCache(sdef *SDefine, ids datasource.IDataSource, rBody *SRequestBody) (*mgr.RestResult, error) {
+	r, err := c.SHandlerBase.getCache(sdef, ids, rBody)
+	if r != nil {
+		dst, ok := (*r)["resultset"]
+		if ok {
+			ds, ok := dst.(*datasource.DataResultSet)
+			if ok {
+				resuleset, err := c.doPostAction(c.DoBulldozer(ds, rBody.Bulldozer), rBody)
+				if err != nil {
+					return nil, err
+				}
+				(*r)["resultset"] = resuleset
+			}
+		}
+	}
+	return r, err
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// 返回缓存的结果数据
+func (c *IDSServiceHandler) doGetCache(sdef *SDefine, ids datasource.IDataSource, rBody *SRequestBody) {
+	r, err := c.getCache(sdef, ids, rBody)
+	if r != nil {
+		(*r)["result"] = true
+	}
+	if err != nil {
+		(*r)["msg"] = err.Error()
+	}
+	c.Ctl.Data["json"] = r
+	c.ServeJSON()
 }
 
 // DoBulldozer 处理推土机函数
@@ -620,129 +656,18 @@ func (c *IDSServiceHandler) doQuery(sdef *SDefine, ids datasource.IDataSource, r
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// 返回服务元数据
-func (c *IDSServiceHandler) doGetMeta(sdef *SDefine, ids datasource.IDataSource, rBody *SRequestBody) {
-	r := CreateRestResult(true)
-	sd := make(map[string]interface{})
-	r["servicedefine"] = sd
-	sd["Context"] = sdef.Context
-	sd["BodyType"] = sdef.BodyType
-	sd["ServiceType"] = sdef.ServiceType
-	sd["Namespace"] = sdef.Namespace
-	sd["Enabled"] = sdef.Enabled
-	sd["MsgLog"] = sdef.MsgLog
-	sd["Security"] = sdef.Security
-	meta := make(map[string]interface{})
-	err2 := json.Unmarshal([]byte(sdef.Meta), &meta)
-	if err2 == nil {
-		sd["Meta"] = meta
-	} else {
-		sd["Meta"] = sdef.Meta
-	}
-
-	imp := []string{"IDataSource"}
-	if _, ok := ids.(datasource.ICriteriaDataSource); ok {
-		imp = append(imp, "ICriteriaDataSource")
-	}
-	if _, ok := ids.(datasource.IFilterAdder); ok {
-		imp = append(imp, "IFilterAdder")
-	}
-	if _, ok := ids.(datasource.IAggregativeAdder); ok {
-		imp = append(imp, "IAggregativeAdder")
-	}
-	if _, ok := ids.(datasource.IWriteableDataSource); ok {
-		imp = append(imp, "IWriteableDataSource")
-	}
-	r["ids"] = imp
-
-	c.Ctl.Data["json"] = r
-	c.ServeJSON()
-}
-
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// 返回缓存的结果数据
-func (c *IDSServiceHandler) doGetCache(sdef *SDefine, ids datasource.IDataSource, rBody *SRequestBody) {
-	key := c.Ctl.Input().Get(RequestParamCachebykey)
-	if key == "" {
-		r := CreateRestResult(false)
-		r["msg"] = RequestParamCachebykey + "不得为空"
-		c.Ctl.Data["json"] = r
-		c.ServeJSON()
-	}
-	obj := utils.DataSetResultCache.Get(key)
-	if obj == nil {
-		r := CreateRestResult(false)
-		r["msg"] = "没有找到请求的缓存信息"
-		c.Ctl.Data["json"] = r
-		c.ServeJSON()
-		return
-	}
-	r, ok := obj.(RestResult)
-	if !ok {
-		r := CreateRestResult(false)
-		r["msg"] = "缓存对象类型非法"
-		c.Ctl.Data["json"] = r
-		c.ServeJSON()
-		return
-	}
-	times := r["cachetimes"].(int)
-	d := r["duration"].(int)
-	if times > 0 {
-		times = times - 1
-	}
-	r["cachetimes"] = times
-	if times == 0 {
-		err := utils.DataSetResultCache.Delete(key)
-		if err != nil {
-			r["result"] = false
-			r["msg"] = "删除缓存时发生错误：" + err.Error()
-			c.Ctl.Data["json"] = r
-			return
-		}
-	} else {
-
-		err := utils.DataSetResultCache.Put(key, obj, time.Duration(d)*time.Second)
-		if err != nil {
-			r["result"] = false
-			r["msg"] = "加入缓存时发生错误：" + err.Error()
-			c.Ctl.Data["json"] = r
-			return
-		}
-	}
-
-	dst, ok := r["resultset"]
-	if ok {
-		ds, ok := dst.(*datasource.DataResultSet)
-		if ok {
-			resuleset, err := c.doPostAction(c.DoBulldozer(ds, rBody.Bulldozer), rBody)
-			if err != nil {
-				c.createErrorResponseByError(err)
-				c.ServeJSON()
-			}
-			c.setResultSet(resuleset)
-			c.ServeJSON()
-			return
-		}
-	}
-	r["result"] = true
-	c.Ctl.Data["json"] = r
-	c.ServeJSON()
-}
-
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 返回当前类支持的动作类型,以及动作对应的操作函数
 // 该方法由 func (c *IDSServiceHandler) DoSrv(sdef *SDefine, inf SHandlerInterface)方法调用
 func (c *IDSServiceHandler) getActionMap() map[string]SerivceActionHandler {
-	return map[string]SerivceActionHandler{
-		SrvActionMETA:    c.doGetMeta,
-		SrvActionQUERY:   c.doQuery,
-		SrvActionDELETE:  c.doDelete,
-		SrvActionUPDATE:  c.doUpdate,
-		SrvActionINSERT:  c.doInsert,
-		SrvActionALLDATA: c.doAllData,
-		SrvActionGET:     c.doGetValueByKey,
-		SrvActionCACHE:   c.doGetCache,
-	}
+	r := c.SHandlerBase.getActionMap()
+	r[SrvActionCACHE] = c.doGetCache
+	r[SrvActionQUERY] = c.doQuery
+	r[SrvActionDELETE] = c.doDelete
+	r[SrvActionUPDATE] = c.doUpdate
+	r[SrvActionINSERT] = c.doInsert
+	r[SrvActionALLDATA] = c.doAllData
+	r[SrvActionGET] = c.doGetValueByKey
+	return r
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -765,7 +690,6 @@ func (c *IDSServiceHandler) doGetValueByKey(sdef *SDefine, ids datasource.IDataS
 		c.setResultSet(c.DoBulldozer(resuleset, rBody.Bulldozer))
 	}
 	c.ServeJSON()
-
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -782,47 +706,4 @@ func (c *IDSServiceHandler) getRBody() *SRequestBody {
 		rBody = nil
 	}
 	return rBody
-}
-
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// 根据元数据返回处理服务的接口
-func (c *IDSServiceHandler) getServiceInterface(sdef *SDefine) (interface{}, error) {
-	metestr := sdef.Meta
-	meta := make(map[string]interface{})
-	err2 := json.Unmarshal([]byte(metestr), &meta)
-	if err2 != nil {
-		return nil, fmt.Errorf("meta信息不正确,应为JSON格式")
-	}
-	idstr := meta["ids"].(string)
-	if strings.Index(idstr, ".") == -1 {
-		idstr = sdef.ProjectId + "." + idstr
-	}
-	return datasource.CreateIDSFromName(idstr)
-}
-
-// DoSrv 处理服务请求的入口
-func (c *IDSServiceHandler) DoSrv(sdef *SDefine, inf SHandlerInterface) {
-
-	//////////////////////////////////////////////////////////////////////////
-	//调用传入的接口中的方法实现下面的功能,因为需要通过不同的接口实现来实现不同的行为
-	obj, err := inf.getServiceInterface(sdef)
-	if err != nil {
-		c.createErrorResponseByError(err)
-		return
-	}
-	rBody := inf.getRBody()
-	//////////////////////////////////////////////////////////////////////////
-	ids, ok := obj.(datasource.IDataSource)
-	if !ok {
-		c.createErrorResponse("请求的服务没有实现IDataSource接口")
-		return
-	}
-	act := c.Ctl.Ctx.Input.Param(":action")
-	amap := inf.getActionMap()
-	f, ok := amap[act]
-	if !ok {
-		c.createErrorResponse("请求的动作当前服务没有实现")
-		return
-	}
-	f(sdef, ids, rBody)
 }

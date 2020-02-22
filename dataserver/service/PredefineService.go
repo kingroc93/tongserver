@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"tongserver.dataserver/datasource"
+	"tongserver.dataserver/mgr"
 )
 
 // PredefineServiceHandler 预定义的服务，可以将请求的报文保存在数据库中，形成预定义的服务4
@@ -96,7 +97,7 @@ func (c *PredefineServiceHandler) doAllData(sdef *SDefine, ids datasource.IDataS
 
 // doGetMeta 返回元数据
 func (c *PredefineServiceHandler) doGetMeta(sdef *SDefine, ids datasource.IDataSource, rBody *SRequestBody) {
-	r := CreateRestResult(true)
+	r := mgr.CreateRestResult(true)
 	sd := make(map[string]interface{})
 	r["servicedefine"] = sd
 	sd["Context"] = sdef.Context

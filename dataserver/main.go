@@ -10,13 +10,15 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/satori/go.uuid"
 	"strings"
+	"sync"
 	"tongserver.dataserver/datasource"
 	"tongserver.dataserver/mgr"
 	_ "tongserver.dataserver/routers"
-	"tongserver.dataserver/service"
 	_ "tongserver.dataserver/service"
 	//	_ "github.com/mattn/go-oci8"
 )
+
+var mu sync.Mutex
 
 // 注册数据源
 func reloadDBUrl() error {
@@ -69,20 +71,35 @@ func reloadIds() error {
 	}
 	return nil
 }
+
+// createDefaultDataIDs 注册默认数据源，这些数据源用于系统管理
 func createDefaultDataIDs() error {
 	var meta map[string]interface{}
+
+	// 系统元数据
 	meta = map[string]interface{}{
 		"name":      "default.mgr.G_META",
 		"inf":       "CreateTableDataSource",
 		"dbalias":   "default",
 		"tablename": "G_META"}
 	datasource.IDSContainer[meta["name"].(string)] = meta
+
+	// 系统元数据中的数据项
 	meta = map[string]interface{}{
 		"name":      "default.mgr.G_META_ITEM",
 		"inf":       "CreateTableDataSource",
 		"dbalias":   "default",
 		"tablename": "G_META_ITEM"}
 	datasource.IDSContainer[meta["name"].(string)] = meta
+
+	// 系统用户信息JEDA_USER
+	meta = map[string]interface{}{
+		"name":      "default.mgr.JEDA_USER",
+		"inf":       "CreateTableDataSource",
+		"dbalias":   "default",
+		"tablename": "JEDA_USER"}
+	datasource.IDSContainer[meta["name"].(string)] = meta
+
 	return nil
 }
 
@@ -99,8 +116,8 @@ func main() {
 
 	}
 
-	service.HASHSECRET = beego.AppConfig.String("jwt.token.hashsecret")
-	service.TokenExpire, _ = beego.AppConfig.Int64("jwt.token.expire")
+	mgr.HASHSECRET = beego.AppConfig.String("jwt.token.hashsecret")
+	mgr.TokenExpire, _ = beego.AppConfig.Int64("jwt.token.expire")
 
 	if dbtype == "mysql" {
 		dburl := username + ":" + pwd + "@tcp(" + beego.AppConfig.String("db.default.ipport") + ")/" + beego.AppConfig.String("db.default.database")
