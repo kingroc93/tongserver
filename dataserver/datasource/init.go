@@ -235,6 +235,25 @@ func CreateWriteableTableDataSource(name, dbAlias, tablename string, fields ...s
 	return ids
 }
 
+// CreateSQLDataSource 创建SQL数据源sql语句必须是查询语句
+func CreateSQLDataSource(name, dbAlias, sql string, fields ...string) *SQLDataSource {
+	//TODO: 此处应该补充一个创建SQL数据源的方法，当SQL有参数的时候使用
+	fs := make([]*MyProperty, len(fields), len(fields))
+	for i, e := range fields {
+		fs[i] = &MyProperty{Name: e}
+	}
+	sqld := &SQLDataSource{
+		DBDataSource: DBDataSource{
+			DataSource: DataSource{
+				Name:  name,
+				Field: fs},
+			DBAlias: dbAlias,
+		},
+		SQL: sql}
+	sqld.Init()
+	return sqld
+}
+
 // CreateTableDataSource 创建数据表数据源
 func CreateTableDataSource(name, dbAlias, tablename string, fields ...string) *TableDataSource {
 

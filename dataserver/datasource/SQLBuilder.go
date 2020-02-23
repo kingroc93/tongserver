@@ -104,12 +104,13 @@ type MySQLSQLBuileder struct {
 }
 
 // CreateSQLBuileder2ObjectTable 创建SQL构造器
-func CreateSQLBuileder2ObjectTable(dbType string, objectTable string, columns []string, orderby []string, rowslimit int, rowsoffset int) (ISQLBuilder, error) {
+func CreateSQLBuileder2ObjectTable(dbType string, objectTable string, tablename string, columns []string, orderby []string, rowslimit int, rowsoffset int) (ISQLBuilder, error) {
 	switch dbType {
 	case DbTypeMySQL:
 		return &MySQLSQLBuileder{
 			SQLBuilder: SQLBuilder{
 				objectTable: objectTable,
+				tableName:   tablename,
 				columns:     columns,
 				orderBy:     orderby,
 				rowsLimit:   rowslimit,

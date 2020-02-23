@@ -6,6 +6,8 @@ import (
 )
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// SQLDataSource sql数据源，类似Table数据源的方式使用，SQL语句的执行结果作为数据源，
+// 同样支持Table数据源类似的分页、条件、排序、聚合等操作。
 type SQLDataSource struct {
 	DBDataSource
 	SQL          string
@@ -40,7 +42,7 @@ func (c *SQLDataSource) Init() error {
 	return nil
 }
 func (c *SQLDataSource) fillFields() error {
-	sqlb, err := CreateSQLBuileder2ObjectTable(DBAlias2DBTypeContainer[c.DBAlias], "", c.convertPropertys2Cols(c.Field), c.orderlist, c.RowsLimit, c.RowsOffset)
+	sqlb, err := CreateSQLBuileder2ObjectTable(DBAlias2DBTypeContainer[c.DBAlias], c.SQL, c.Name, c.convertPropertys2Cols(c.Field), c.orderlist, c.RowsLimit, c.RowsOffset)
 
 	sqlstr, _ := sqlb.CreateSelectSQL()
 	rs, err := c.querySQLData(sqlstr, c.ParamsValues...)
@@ -82,7 +84,7 @@ func (c *SQLDataSource) QueryDataByKey(keyvalues ...interface{}) (*DataResultSet
 }
 
 func (c *SQLDataSource) createSQLBuilder() ISQLBuilder {
-	sqlb, _ := CreateSQLBuileder2ObjectTable(DBAlias2DBTypeContainer[c.DBAlias], "", c.convertPropertys2Cols(c.Field), c.orderlist, c.RowsLimit, c.RowsOffset)
+	sqlb, _ := CreateSQLBuileder2ObjectTable(DBAlias2DBTypeContainer[c.DBAlias], c.SQL, c.Name, c.convertPropertys2Cols(c.Field), c.orderlist, c.RowsLimit, c.RowsOffset)
 	return sqlb
 }
 

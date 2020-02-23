@@ -11,5 +11,9 @@ var DictDataCache, _ = cache.NewCache("memory", `{"interval":60}`)
 // DataSetResultCache 用于保存结果集的缓存
 var DataSetResultCache, _ = cache.NewCache("memory", `{"interval":60}`)
 
+const (
+	CACHE_PREFIX_SERVICEACCESS string = "SR_ACCESS"
+)
+
 // JedaDataCache 用于保存Jeda管理信息
 var JedaDataCache, _ = cache.NewCache("memory", `{"interval":60}`)

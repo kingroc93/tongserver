@@ -24,6 +24,7 @@ type ISevurityService interface {
 	VerifyToken(c *beego.Controller) (string, error)
 	VerifyTokenCtx(ctx *context.Context) (string, error)
 	CreateToken(userid string, pwd string) (string, error)
+	VerifyService(userid string, cnt string, rightmask int) bool
 }
 type TokenService struct{}
 
@@ -37,13 +38,20 @@ func GetTokenServiceInstance() ISevurityService {
 	return tokenService
 }
 
-func (c *TokenService) checkPwd(u string, p string) bool {
-	obj := utils.JedaDataCache.Get(u)
-	if obj != nil {
-		if p == obj.(string) {
-			return true
+func (c *TokenService) VerifyService(userid string, cnt string, rightmask int) bool {
+	srvmap := utils.JedaDataCache.Get(utils.CACHE_PREFIX_SERVICEACCESS + cnt)
+	if srvmap == nil {
+		o := orm.NewOrm()
+		var maps []orm.Params
+		_, err := o.Raw("SELECT USER_ID FROM JEDA_USER WHERE LOGIN_NAME=? and USER_PASSWORD=?").Values(&maps)
+		if err != nil {
+			return false
 		}
 	}
+	return true
+}
+
+func (c *TokenService) checkPwd(u string, p string) bool {
 	o := orm.NewOrm()
 	var maps []orm.Params
 	_, err := o.Raw("SELECT USER_ID FROM JEDA_USER WHERE LOGIN_NAME=? and USER_PASSWORD=?", u, p).Values(&maps)

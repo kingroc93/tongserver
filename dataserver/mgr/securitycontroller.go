@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/orm"
-	"tongserver.dataserver/utils"
 )
 
 // SecurityController 安全认证WebAPI
@@ -30,12 +29,7 @@ func (c *SecurityController) VerifyToken() {
 
 // checkPwd 检验密码是否一致
 func (c *SecurityController) checkPwd(u string, p string) bool {
-	obj := utils.JedaDataCache.Get(u)
-	if obj != nil {
-		if p == obj.(string) {
-			return true
-		}
-	}
+
 	o := orm.NewOrm()
 	var maps []orm.Params
 	_, err := o.Raw("SELECT USER_ID,POSITION_ID,ORG_ID,USER_NAME,USER_PASSWORD FROM JEDA_USER WHERE LOGIN_NAME=? and USER_PASSWORD=?", u, p).Values(&maps)
