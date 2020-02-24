@@ -12,7 +12,7 @@ var DictDataCache, _ = cache.NewCache("memory", `{"interval":60}`)
 var DataSetResultCache, _ = cache.NewCache("memory", `{"interval":60}`)
 
 const (
-	CACHE_PREFIX_SERVICEACCESS string = "SR_ACCESS"
+	CACHE_PREFIX_SERVICEACCESS string = "SR_ACCESS_"
 )
 
 // JedaDataCache 用于保存Jeda管理信息

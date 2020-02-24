@@ -14,6 +14,42 @@ const (
 	formatDateTime = "2006-01-02 15:04:05"
 )
 
+// StringSet string 简单的集合类型
+// 底层数据结构使用map
+type StringSet map[string]bool
+
+// IsEmpty 返回集合是否为空
+func (c *StringSet) IsEmpty() bool {
+	return len(*c) == 0
+}
+
+// Mix 求交集
+func (c *StringSet) Mix(d *StringSet) *StringSet {
+	R := make(StringSet)
+	for k, _ := range *d {
+		if c.Exist(k) {
+			R.Put(k)
+		}
+	}
+	return &R
+}
+
+// Put 添加元素
+func (c *StringSet) Put(value string) {
+	(*c)[value] = true
+}
+
+// Remove 删除元素
+func (c *StringSet) Remove(value string) {
+	delete((*c), value)
+}
+
+// Exist 元素是否存在
+func (c *StringSet) Exist(value string) bool {
+	_, ok := (*c)[value]
+	return ok
+}
+
 // ArrayList 可变长数组
 type ArrayList struct {
 	elements []interface{}

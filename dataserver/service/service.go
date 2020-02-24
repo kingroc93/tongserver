@@ -87,6 +87,7 @@ func (c *SController) reloadSrvMetaFromDatabase(cnt string) (*SDefine, error) {
 	}
 
 	srv := &SDefine{
+		ServiceId:   rs.Data[0][rs.Fields["ID"].Index].(string),
 		Context:     rs.Data[0][rs.Fields["CONTEXT"].Index].(string),
 		BodyType:    rs.Data[0][rs.Fields["BODYTYPE"].Index].(string),
 		ServiceType: rs.Data[0][rs.Fields["SERVICETYPE"].Index].(string),

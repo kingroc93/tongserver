@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/context"
+	"github.com/astaxie/beego/logs"
 	"github.com/astaxie/beego/orm"
 	"github.com/rs/xid"
 	"strings"
@@ -26,12 +27,15 @@ type ISevurityService interface {
 	VerifyTokenCtx(ctx *context.Context) (string, error)
 	CreateToken(userid string, pwd string) (string, error)
 	VerifyService(userid string, cnt string, rightmask int) bool
+	GetRoleByUserid(userid string) (utils.StringSet, error)
 }
+
 type TokenService struct{}
 
 var tokenService ISevurityService
 var once sync.Once
 
+// GetTokenServiceInstance 创建一个令牌服务
 func GetTokenServiceInstance() ISevurityService {
 	once.Do(func() {
 		tokenService = &TokenService{}
@@ -39,15 +43,81 @@ func GetTokenServiceInstance() ISevurityService {
 	return tokenService
 }
 
-func (c *TokenService) VerifyService(userid string, cnt string, rightmask int) bool {
-	srvmap := utils.JedaDataCache.Get(utils.CACHE_PREFIX_SERVICEACCESS + cnt)
-	if srvmap == nil {
-		sqld := datasource.CreateSQLDataSource("", "default",
-			"SELECT * FROM idb.G_USERSERVICE a inner join JEDA_ROLE_USER b on a.ROLEID=b.ROLE_ID and b.USER_ID=?")
+// GetRoleByUserid 返回用户的角色信息
+func (c *TokenService) GetRoleByUserid(userid string) (utils.StringSet, error) {
+	var rolemap interface{}
+	rolemap = utils.JedaDataCache.Get(utils.CACHE_PREFIX_SERVICEACCESS + "ROLE" + userid)
+	if rolemap == nil {
+		sqld := datasource.CreateSQLDataSource("", "default", "select * from idb.JEDA_ROLE_USER where USER_ID=?")
+		sqld.ParamsValues = []interface{}{userid}
+		rs, err := sqld.GetAllData()
+		if err != nil {
+			return nil, err
+		}
+		if len(rs.Data) == 0 {
+			logs.Info("get user role not found，user:%s", userid)
+			return nil, nil
+		}
+		r := make(utils.StringSet)
+		for _, item := range rs.Data {
+			r.Put(item[rs.Fields["ROLE_ID"].Index].(string))
+		}
+		rolemap = r
+		utils.JedaDataCache.Put(utils.CACHE_PREFIX_SERVICEACCESS+"ROLE"+userid, rolemap, 60)
 	}
-	return true
+	o, ok := rolemap.(utils.StringSet)
+	if !ok {
+		return nil, fmt.Errorf("GetRoleByUserid 类型转换失败rolemap.(utils.StringSet)")
+	}
+	return o, nil
 }
 
+// VerifyService 检验用户是否可以访问指定的服务，rightmask参数目前尚未处理
+func (c *TokenService) VerifyService(userid string, serviceid string, rightmask int) bool {
+	var srvmap interface{}
+	srvmap = utils.JedaDataCache.Get(utils.CACHE_PREFIX_SERVICEACCESS + serviceid)
+	if srvmap == nil {
+		sqld := datasource.CreateSQLDataSource("", "default",
+			"SELECT * FROM idb.G_USERSERVICE where SERVICEID=?")
+		sqld.ParamsValues = []interface{}{serviceid}
+		rs, err := sqld.GetAllData()
+		if err != nil {
+			logs.Error("VerifyService error:serviceid:%s\t userid:%s\t error:%s", serviceid, userid, err.Error())
+			return false
+		}
+		serviceaccrssMap := make(map[string]utils.StringSet)
+		for _, item := range rs.Data {
+			o, ok := serviceaccrssMap[item[rs.Fields["SERVICEID"].Index].(string)]
+			if !ok {
+				o = make(utils.StringSet)
+			}
+			o.Put(item[rs.Fields["ROLEID"].Index].(string))
+			serviceaccrssMap[item[rs.Fields["SERVICEID"].Index].(string)] = o
+		}
+		err = utils.JedaDataCache.Put(utils.CACHE_PREFIX_SERVICEACCESS+serviceid, serviceaccrssMap, 60)
+		if err != nil {
+			logs.Error("VerifyService  utils.JedaDataCache.Put error : %s", err.Error())
+		}
+		srvmap = serviceaccrssMap
+	}
+	sm, ok := srvmap.(map[string]utils.StringSet)
+	if !ok {
+		logs.Error("VerifyService 类型转换错误，希望类型map[string]utils.StringSet")
+		return false
+	}
+	v, ok := sm[serviceid]
+	if !ok {
+		return false
+	}
+	r, err := c.GetRoleByUserid(userid)
+	if err != nil {
+		logs.Error("VerifyService 获取用户角色信息发生错误," + err.Error())
+		return false
+	}
+	return !r.Mix(&v).IsEmpty()
+}
+
+// checkPwd 检验密码
 func (c *TokenService) checkPwd(u string, p string) bool {
 	o := orm.NewOrm()
 	var maps []orm.Params
@@ -62,6 +132,7 @@ func (c *TokenService) checkPwd(u string, p string) bool {
 
 }
 
+// CreateToken 创建令牌
 func (c *TokenService) CreateToken(uname string, pwd string) (string, error) {
 	if !c.checkPwd(uname, pwd) {
 		return "", fmt.Errorf("验证失败")
