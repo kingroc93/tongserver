@@ -11,7 +11,6 @@ import (
 type SQLDataSource struct {
 	DBDataSource
 	SQL          string
-	Params       []MyProperty
 	ParamsValues []interface{}
 }
 
@@ -38,7 +37,6 @@ func (c *SQLDataSource) Init() error {
 	if c.AutoFillFields {
 		return c.fillFields()
 	}
-
 	return nil
 }
 func (c *SQLDataSource) fillFields() error {
@@ -64,6 +62,7 @@ func (c *SQLDataSource) GetName() string {
 }
 
 func (c *SQLDataSource) QueryDataByFieldValues(fv *map[string]interface{}) (*DataResultSet, error) {
+
 	c.ClearCriteria()
 	for pname, value := range *fv {
 		c.AndCriteria(pname, OperEq, value)
@@ -72,6 +71,7 @@ func (c *SQLDataSource) QueryDataByFieldValues(fv *map[string]interface{}) (*Dat
 }
 
 func (c *SQLDataSource) QueryDataByKey(keyvalues ...interface{}) (*DataResultSet, error) {
+
 	if len(keyvalues) == 0 {
 		return nil, fmt.Errorf("key values is none!")
 	}
@@ -79,7 +79,6 @@ func (c *SQLDataSource) QueryDataByKey(keyvalues ...interface{}) (*DataResultSet
 	for i, v := range keyvalues {
 		c.AndCriteria(c.KeyField[i].Name, OperEq, v)
 	}
-
 	return c.DoFilter()
 }
 
@@ -95,6 +94,7 @@ func (c *SQLDataSource) GetAllData() (*DataResultSet, error) {
 }
 
 func (c *SQLDataSource) DoFilter() (*DataResultSet, error) {
+
 	sqlb := c.createSQLBuilder()
 	sqlb.ClearCriteria()
 	for _, item := range c.filter {

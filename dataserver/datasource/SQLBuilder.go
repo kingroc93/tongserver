@@ -307,7 +307,13 @@ func (c *MySQLSQLBuileder) CreateInsertSQLByMap(fieldvalues map[string]interface
 
 // CreateSelectSQL 创建Select语句
 func (c *MySQLSQLBuileder) CreateSelectSQL() (string, []interface{}) {
-	if c.objectTable != "" && len(c.criteria) == 0 && c.rowsLimit == 0 && c.rowsOffset == 0 && len(c.orderBy) == 0 && len(c.aggre) == 0 && (len(c.columns) == 0 || c.columns[0] == "*") {
+	if c.objectTable != "" &&
+		len(c.criteria) == 0 &&
+		c.rowsLimit == 0 &&
+		c.rowsOffset == 0 &&
+		len(c.orderBy) == 0 &&
+		len(c.aggre) == 0 &&
+		(len(c.columns) == 0 || c.columns[0] == "*") {
 		return c.objectTable, nil
 	}
 	var sql = "SELECT "

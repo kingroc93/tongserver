@@ -21,6 +21,8 @@ const (
 
 // SDefine 服务定义结构体
 type SDefine struct {
+	// ServiceId 服务ID GUID类型
+	ServiceId string
 	// Context 上下文
 	Context string
 	// BodyType 报文类型
@@ -65,6 +67,7 @@ func (c *SController) reloadSrvMetaFromDatabase(cnt string) (*SDefine, error) {
 		return nil, fmt.Errorf("上下文格式不正确")
 	}
 	sdef, ok := SDefineContainer[cnt]
+
 	if ok {
 		return sdef, nil
 	}

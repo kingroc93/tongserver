@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"tongserver.dataserver/datasource"
 	"tongserver.dataserver/utils"
 )
 
@@ -41,12 +42,8 @@ func GetTokenServiceInstance() ISevurityService {
 func (c *TokenService) VerifyService(userid string, cnt string, rightmask int) bool {
 	srvmap := utils.JedaDataCache.Get(utils.CACHE_PREFIX_SERVICEACCESS + cnt)
 	if srvmap == nil {
-		o := orm.NewOrm()
-		var maps []orm.Params
-		_, err := o.Raw("SELECT USER_ID FROM JEDA_USER WHERE LOGIN_NAME=? and USER_PASSWORD=?").Values(&maps)
-		if err != nil {
-			return false
-		}
+		sqld := datasource.CreateSQLDataSource("", "default",
+			"SELECT * FROM idb.G_USERSERVICE a inner join JEDA_ROLE_USER b on a.ROLEID=b.ROLE_ID and b.USER_ID=?")
 	}
 	return true
 }
