@@ -26,7 +26,7 @@ type ISevurityService interface {
 	VerifyToken(c *beego.Controller) (string, error)
 	VerifyTokenCtx(ctx *context.Context) (string, error)
 	CreateToken(userid string, pwd string) (string, error)
-	VerifyService(userid string, cnt string, rightmask int) bool
+	VerifyService(userid string, serviceid string, rightmask int) bool
 	GetRoleByUserid(userid string) (utils.StringSet, error)
 }
 
@@ -63,7 +63,10 @@ func (c *TokenService) GetRoleByUserid(userid string) (utils.StringSet, error) {
 			r.Put(item[rs.Fields["ROLE_ID"].Index].(string))
 		}
 		rolemap = r
-		utils.JedaDataCache.Put(utils.CACHE_PREFIX_SERVICEACCESS+"ROLE"+userid, rolemap, 60)
+		err = utils.JedaDataCache.Put(utils.CACHE_PREFIX_SERVICEACCESS+"ROLE"+userid, rolemap, 60*time.Second)
+		if err != nil {
+			logs.Error(err.Error())
+		}
 	}
 	o, ok := rolemap.(utils.StringSet)
 	if !ok {
@@ -94,7 +97,7 @@ func (c *TokenService) VerifyService(userid string, serviceid string, rightmask 
 			o.Put(item[rs.Fields["ROLEID"].Index].(string))
 			serviceaccrssMap[item[rs.Fields["SERVICEID"].Index].(string)] = o
 		}
-		err = utils.JedaDataCache.Put(utils.CACHE_PREFIX_SERVICEACCESS+serviceid, serviceaccrssMap, 60)
+		err = utils.JedaDataCache.Put(utils.CACHE_PREFIX_SERVICEACCESS+serviceid, serviceaccrssMap, 60*time.Second)
 		if err != nil {
 			logs.Error("VerifyService  utils.JedaDataCache.Put error : %s", err.Error())
 		}

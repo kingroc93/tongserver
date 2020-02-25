@@ -28,6 +28,9 @@ func (c *DataSource) Init() {
 
 // convertPropertys2Cols 将字段属性的数组转换为字段名的数组
 func (c *DataSource) convertPropertys2Cols(ps []*MyProperty) []string {
+	if ps == nil {
+		return nil
+	}
 	L := 0
 	for _, v := range ps {
 		if !v.OutJoin {

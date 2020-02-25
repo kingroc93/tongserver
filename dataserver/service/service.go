@@ -125,18 +125,20 @@ func (c *SController) DoSrv() {
 	}
 	if sdef.Security {
 		// 处理访问控制
-
-		_, err := mgr.GetTokenServiceInstance().VerifyToken(&c.Controller)
+		userid, err := mgr.GetTokenServiceInstance().VerifyToken(&c.Controller)
 		if err != nil {
 			r := mgr.CreateRestResult(false)
 			r["msg"] = err.Error()
 			c.Data["json"] = r
 			c.ServeJSON()
-		} else {
+			return
+		}
+		if !mgr.GetTokenServiceInstance().VerifyService(userid, sdef.ServiceId, 0) {
 			r := mgr.CreateRestResult(false)
-			r["msg"] = "access denined"
+			r["msg"] = "未授权的请求"
 			c.Data["json"] = r
 			c.ServeJSON()
+			return
 		}
 	}
 	handler, ok := SHandlerContainer[sdef.ServiceType]
