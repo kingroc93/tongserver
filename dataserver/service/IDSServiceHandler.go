@@ -9,7 +9,7 @@ import (
 	"time"
 	"tongserver.dataserver/cube"
 	"tongserver.dataserver/datasource"
-	"tongserver.dataserver/mgr"
+	"tongserver.dataserver/utils"
 )
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -81,7 +81,7 @@ func (c *IDSServiceHandler) doBulldozer(dataSet *datasource.DataResultSet, index
 	}
 }
 
-func (c *IDSServiceHandler) getCache(sdef *SDefine, ids datasource.IDataSource, rBody *SRequestBody) (*mgr.RestResult, error) {
+func (c *IDSServiceHandler) getCache(sdef *SDefine, ids datasource.IDataSource, rBody *SRequestBody) (*utils.RestResult, error) {
 	r, err := c.SHandlerBase.getCache(sdef, ids, rBody)
 	if r != nil {
 		dst, ok := (*r)["resultset"]

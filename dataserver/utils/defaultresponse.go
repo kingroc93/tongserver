@@ -1,8 +1,18 @@
-package mgr
+package utils
 
 import (
 	"github.com/astaxie/beego"
 )
+
+// RestResult 请求返回的数据类型
+type RestResult map[string]interface{}
+
+// CreateRestResult 创建返回数据实例
+func CreateRestResult(success bool) RestResult {
+	var result = make(RestResult)
+	result["result"] = success
+	return result
+}
 
 // CreateErrorResponse 创建错误信息的响应
 func CreateErrorResponse(msg string, Ctl *beego.Controller) {

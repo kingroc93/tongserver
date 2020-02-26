@@ -1,4 +1,4 @@
-package mgr
+package service
 
 import (
 	"encoding/json"

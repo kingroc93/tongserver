@@ -5,24 +5,37 @@ import (
 	"encoding/json"
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/orm"
+	"tongserver.dataserver/service"
+	"tongserver.dataserver/utils"
 )
+
+type ControllerWithVerify struct {
+}
 
 // SecurityController 安全认证WebAPI
 type SecurityController struct {
 	beego.Controller
+	ControllerWithVerify
+}
+
+func (c *ControllerWithVerify) Verifty(ctl *beego.Controller) bool {
+	_, err := service.GetTokenServiceInstance().VerifyToken(ctl)
+	if err != nil {
+		r := utils.CreateRestResult(false)
+		r["msg"] = err.Error()
+		ctl.Data["json"] = r
+		ctl.ServeJSON()
+		return false
+	}
+	return true
 }
 
 // VerifyToken 验证令牌是否合法的web api
 func (c *SecurityController) VerifyToken() {
-	_, err := GetTokenServiceInstance().VerifyToken(&c.Controller)
-	if err != nil {
-		r := CreateRestResult(false)
-		r["msg"] = err.Error()
-		c.Data["json"] = r
-		c.ServeJSON()
+	if !c.Verifty(&c.Controller) {
 		return
 	}
-	result := CreateRestResult(true)
+	result := utils.CreateRestResult(true)
 	c.Data["json"] = result
 	c.ServeJSON()
 }
@@ -56,7 +69,7 @@ func (c *SecurityController) CreateToken() {
 		}{}
 		err := json.Unmarshal([]byte(c.Ctx.Input.RequestBody), rbody)
 		if err != nil {
-			c.Data["json"] = CreateRestResult(false)
+			c.Data["json"] = utils.CreateRestResult(false)
 			c.ServeJSON()
 			return
 		}
@@ -64,13 +77,13 @@ func (c *SecurityController) CreateToken() {
 		pwd = rbody.Password
 	}
 
-	t, err := GetTokenServiceInstance().CreateToken(uname, pwd)
+	t, err := service.GetTokenServiceInstance().CreateToken(uname, pwd)
 	if err == nil {
 		c.Data["json"] = map[string]interface{}{"result": true, "token": t}
 		c.ServeJSON()
 		return
 	}
-	r := CreateRestResult(false)
+	r := utils.CreateRestResult(false)
 	r["msg"] = err.Error()
 	c.Data["json"] = r
 	c.ServeJSON()

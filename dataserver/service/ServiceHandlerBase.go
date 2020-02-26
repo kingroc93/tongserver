@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 	"tongserver.dataserver/datasource"
-	"tongserver.dataserver/mgr"
+
 	"tongserver.dataserver/utils"
 )
 
@@ -102,10 +102,10 @@ func (c *SHandlerBase) getActionMap() map[string]SerivceActionHandler {
 
 // createErrorResponse 设定失败结果
 func (c *SHandlerBase) createErrorResponse(msg string) {
-	mgr.CreateErrorResponse(msg, c.Ctl)
+	utils.CreateErrorResponse(msg, c.Ctl)
 }
 
-func (c *SHandlerBase) getCache(sdef *SDefine, ids datasource.IDataSource, rBody *SRequestBody) (*mgr.RestResult, error) {
+func (c *SHandlerBase) getCache(sdef *SDefine, ids datasource.IDataSource, rBody *SRequestBody) (*utils.RestResult, error) {
 	key := c.Ctl.Input().Get(RequestParamCachebykey)
 	if key == "" {
 		return nil, fmt.Errorf(RequestParamCachebykey + "不得为空")
@@ -114,7 +114,7 @@ func (c *SHandlerBase) getCache(sdef *SDefine, ids datasource.IDataSource, rBody
 	if obj == nil {
 		return nil, fmt.Errorf("没有找到请求的缓存信息")
 	}
-	r, ok := obj.(mgr.RestResult)
+	r, ok := obj.(utils.RestResult)
 	if !ok {
 		return nil, fmt.Errorf("缓存对象类型非法")
 	}
@@ -160,7 +160,7 @@ func (c *SHandlerBase) doGetCache(sdef *SDefine, ids datasource.IDataSource, rBo
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 返回服务元数据
 func (c *SHandlerBase) doGetMeta(sdef *SDefine, ids datasource.IDataSource, rBody *SRequestBody) {
-	r := mgr.CreateRestResult(true)
+	r := utils.CreateRestResult(true)
 	sd := make(map[string]interface{})
 	r["servicedefine"] = sd
 	sd["Context"] = sdef.Context
@@ -199,17 +199,17 @@ func (c *SHandlerBase) doGetMeta(sdef *SDefine, ids datasource.IDataSource, rBod
 
 // createErrorResponseByError 根据error设定失败结果
 func (c *SHandlerBase) createErrorResponseByError(err error) {
-	mgr.CreateErrorResponseByError(err, c.Ctl)
+	utils.CreateErrorResponseByError(err, c.Ctl)
 }
 
 // createErrorResult 设定失败结果
 func (c *SHandlerBase) createErrorResult(msg string) {
-	mgr.CreateErrorResponse(msg, c.Ctl)
+	utils.CreateErrorResponse(msg, c.Ctl)
 }
 
 // setResult 设定请求成功的返回结果
 func (c *SHandlerBase) setResult(msg string) {
-	r := mgr.CreateRestResult(true)
+	r := utils.CreateRestResult(true)
 	r["msg"] = msg
 	c.Ctl.Data["json"] = r
 }
@@ -222,7 +222,7 @@ func (c *SHandlerBase) setResultSet(ds *datasource.DataResultSet) {
 		// 缓存的结果集随时都有可能消失
 		cs := c.Ctl.Input().Get(RequestParamCache)
 		css := strings.Split(cs, "_")
-		r := mgr.CreateRestResult(true)
+		r := utils.CreateRestResult(true)
 		if len(css) != 2 {
 			r["result"] = false
 			r["msg"] = "缓存参数" + RequestParamCache + "必须为 [缓存时间]_[最大请求次数] 的形式"
@@ -270,7 +270,7 @@ func (c *SHandlerBase) setResultSet(ds *datasource.DataResultSet) {
 		c.Ctl.Data["json"] = r
 		return
 	}
-	r := mgr.CreateRestResult(true)
+	r := utils.CreateRestResult(true)
 	if c.Ctl.Input().Get(ResponseStyle) != "map" {
 		if c.Ctl.Input().Get(RequestParamNofieldsinfo) != "" {
 			r["data"] = ds.Data

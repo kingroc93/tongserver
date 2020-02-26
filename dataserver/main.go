@@ -14,6 +14,7 @@ import (
 	"tongserver.dataserver/datasource"
 	"tongserver.dataserver/mgr"
 	_ "tongserver.dataserver/routers"
+	"tongserver.dataserver/service"
 	_ "tongserver.dataserver/service"
 	//	_ "github.com/mattn/go-oci8"
 )
@@ -54,7 +55,7 @@ func reloadIds() error {
 		return err
 	}
 	datasource.IDSContainer = make(datasource.IDSContainerType)
-	createDefaultDataIDs()
+	mgr.CreateDefaultDataIDs()
 	for _, row := range rs.Data {
 		meta := make(map[string]interface{})
 		err := json.Unmarshal([]byte(row[rs.Fields["META"].Index].(string)), &meta)
@@ -72,37 +73,6 @@ func reloadIds() error {
 	return nil
 }
 
-// createDefaultDataIDs 注册默认数据源，这些数据源用于系统管理
-func createDefaultDataIDs() error {
-	var meta map[string]interface{}
-
-	// 系统元数据
-	meta = map[string]interface{}{
-		"name":      "default.mgr.G_META",
-		"inf":       "CreateTableDataSource",
-		"dbalias":   "default",
-		"tablename": "G_META"}
-	datasource.IDSContainer[meta["name"].(string)] = meta
-
-	// 系统元数据中的数据项
-	meta = map[string]interface{}{
-		"name":      "default.mgr.G_META_ITEM",
-		"inf":       "CreateTableDataSource",
-		"dbalias":   "default",
-		"tablename": "G_META_ITEM"}
-	datasource.IDSContainer[meta["name"].(string)] = meta
-
-	// 系统用户信息JEDA_USER
-	meta = map[string]interface{}{
-		"name":      "default.mgr.JEDA_USER",
-		"inf":       "CreateTableDataSource",
-		"dbalias":   "default",
-		"tablename": "JEDA_USER"}
-	datasource.IDSContainer[meta["name"].(string)] = meta
-
-	return nil
-}
-
 func main() {
 	logs.SetLogger("console")
 
@@ -116,8 +86,8 @@ func main() {
 
 	}
 
-	mgr.HASHSECRET = beego.AppConfig.String("jwt.token.hashsecret")
-	mgr.TokenExpire, _ = beego.AppConfig.Int64("jwt.token.expire")
+	service.HASHSECRET = beego.AppConfig.String("jwt.token.hashsecret")
+	service.TokenExpire, _ = beego.AppConfig.Int64("jwt.token.expire")
 
 	if dbtype == "mysql" {
 		dburl := username + ":" + pwd + "@tcp(" + beego.AppConfig.String("db.default.ipport") + ")/" + beego.AppConfig.String("db.default.database")

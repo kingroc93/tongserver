@@ -7,17 +7,20 @@ import (
 	"github.com/skip2/go-qrcode"
 	"strconv"
 	"tongserver.dataserver/datasource"
+	"tongserver.dataserver/service"
 	"tongserver.dataserver/utils"
 )
 
 // JedaController 后台管理控制器
 type JedaController struct {
 	beego.Controller
+	ControllerWithVerify
 }
 
 // QrcodeController 生成二维码的控制器
 type QrcodeController struct {
 	beego.Controller
+	ControllerWithVerify
 }
 
 // reloadMetaFun 重新加载元数据的函数句柄类型
@@ -68,20 +71,15 @@ func ReloadMetaData() error {
 
 // ReloadMetaData 重新加载元数据
 func (c *JedaController) ReloadMetaData() {
-	_, err := GetTokenServiceInstance().VerifyToken(&c.Controller)
-	//if err != nil {
-	//	r := service.CreateRestResult(false)
-	//	r["msg"] = err.Error()
-	//	c.Data["json"] = r
-	//	c.ServeJSON()
-	//	return
-	//}
-	err = ReloadMetaData()
+	if !c.ControllerWithVerify.Verifty(&c.Controller) {
+		return
+	}
+	err := ReloadMetaData()
 	if err != nil {
 		logs.Debug("加载系统元数据时发生错误,%v", err.Error())
-		CreateErrorResponseByError(err, &c.Controller)
+		utils.CreateErrorResponseByError(err, &c.Controller)
 	}
-	r := CreateRestResult(true)
+	r := utils.CreateRestResult(true)
 	r["msg"] = "重新加载成功"
 	c.ServeJSON()
 }
@@ -90,7 +88,7 @@ func (c *JedaController) ReloadMetaData() {
 func (c *JedaController) commonCheckGetSrvList() bool {
 	f := metaFuns["ids"]
 	if f == nil {
-		r := CreateRestResult(false)
+		r := utils.CreateRestResult(false)
 		r["msg"] = "没有找到名称为ids的元数据加载函数"
 		c.Data["json"] = r
 		c.ServeJSON()
@@ -98,7 +96,7 @@ func (c *JedaController) commonCheckGetSrvList() bool {
 	}
 	err := f()
 	if err != nil {
-		r := CreateRestResult(false)
+		r := utils.CreateRestResult(false)
 		r["msg"] = err.Error()
 		c.Data["json"] = r
 		c.ServeJSON()
@@ -108,17 +106,14 @@ func (c *JedaController) commonCheckGetSrvList() bool {
 }
 
 func (c *JedaController) Testdbconn() {
-
+	if !c.ControllerWithVerify.Verifty(&c.Controller) {
+		return
+	}
 }
 
 // GetIdsList 返回数据源列表
 func (c *JedaController) GetIdsList() {
-	_, err := GetTokenServiceInstance().VerifyToken(&c.Controller)
-	if err != nil {
-		r := CreateRestResult(false)
-		r["msg"] = err.Error()
-		c.Data["json"] = r
-		c.ServeJSON()
+	if !c.ControllerWithVerify.Verifty(&c.Controller) {
 		return
 	}
 	if c.commonCheckGetSrvList() {
@@ -147,7 +142,7 @@ func (c *JedaController) GetIdsList() {
 	result.Fields["Writeable"] = &datasource.FieldDesc{
 		FieldType: datasource.PropertyDatatypeStr,
 		Index:     4,
-		Meta:      &map[string]string{"CAP": "是够可写"}}
+		Meta:      &map[string]string{"CAP": "是否可写"}}
 	result.Data = make([][]interface{}, 0, len(ids))
 	for k, v := range ids {
 		if v["inf"].(string) != "CreateTableDataSource" && v["inf"].(string) != "CreateWriteableTableDataSource" {
@@ -166,25 +161,15 @@ func (c *JedaController) GetIdsList() {
 		}
 		result.Data = append(result.Data, row)
 	}
-	r := CreateRestResult(true)
+	r := utils.CreateRestResult(true)
 	r["resultset"] = result
 	c.Data["json"] = r
 	c.ServeJSON()
 }
 
-// GetUsers 返回用户列表
-func (c *JedaController) GetUsers() {
-
-}
-
 // GetMenu 返回菜单信息
 func (c *JedaController) GetMenu() {
-	_, err := GetTokenServiceInstance().VerifyToken(&c.Controller)
-	if err != nil {
-		r := CreateRestResult(false)
-		r["msg"] = err.Error()
-		c.Data["json"] = r
-		c.ServeJSON()
+	if !c.ControllerWithVerify.Verifty(&c.Controller) {
 		return
 	}
 	var maps []orm.Params
@@ -193,16 +178,43 @@ func (c *JedaController) GetMenu() {
 	if pid == "" {
 		_, err := o.Raw("SELECT MENU_ID,PARENT_MENU_ID,MENU_NAME,MENU_URL from JEDA_MENU where PARENT_MENU_ID is NULL").Values(&maps)
 		if err != nil {
-			CreateErrorResponseByError(err, &c.Controller)
+			utils.CreateErrorResponseByError(err, &c.Controller)
 			return
 		}
 	} else {
 		_, err := o.Raw("SELECT MENU_ID,PARENT_MENU_ID,MENU_NAME,MENU_URL from JEDA_MENU where PARENT_MENU_ID=?", pid).Values(&maps)
 		if err != nil {
-			CreateErrorResponseByError(err, &c.Controller)
+			utils.CreateErrorResponseByError(err, &c.Controller)
 			return
 		}
 	}
 	c.Data["json"] = maps
 	c.ServeJSON()
+}
+
+// DoSrv
+func (c *JedaController) DoSrv() {
+	//获取上下文
+	cnt := c.Ctx.Input.Param(":context")
+	//根据上下文获取服务定义信息
+	//默认是从数据库获取
+	sdef := JedaSrvContainer[cnt]
+	if sdef == nil {
+		utils.CreateErrorResponse("没有找到请求的服务,"+cnt, &c.Controller)
+		return
+	}
+
+	// 处理访问控制
+	userid, err := service.GetTokenServiceInstance().VerifyToken(&c.Controller)
+	if err != nil {
+		utils.CreateErrorResponse(err.Error(), &c.Controller)
+		return
+	}
+	if !service.GetTokenServiceInstance().VerifyService(userid, sdef.ServiceId, 0) {
+		utils.CreateErrorResponse("未授权的请求", &c.Controller)
+		return
+	}
+
+	h := &service.IDSServiceHandler{service.SHandlerBase{Ctl: &c.Controller}}
+	h.DoSrv(sdef, h)
 }

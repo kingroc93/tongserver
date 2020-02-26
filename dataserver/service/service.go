@@ -5,7 +5,7 @@ import (
 	"github.com/astaxie/beego"
 	"strings"
 	"tongserver.dataserver/datasource"
-	"tongserver.dataserver/mgr"
+	"tongserver.dataserver/utils"
 )
 
 const (
@@ -18,6 +18,12 @@ const (
 	// SrvTypeSrvflow 基于服务流程的服务
 	SrvTypeSrvflow string = "SRVFLOW"
 )
+
+// createServiceHandlerInterfaceFun 创建服务处理句柄的函数类型
+type createServiceHandlerInterfaceFun func(*beego.Controller) SHandlerInterface
+
+// SHandlerContainer 服务处理句柄容器
+var SHandlerContainer = make(map[string]createServiceHandlerInterfaceFun)
 
 // SDefine 服务定义结构体
 type SDefine struct {
@@ -46,19 +52,13 @@ type SDefine struct {
 // SDefineContainerType 服务定义类型
 type SDefineContainerType map[string]*SDefine
 
-// SDefineContainer 服务定义容器
-var SDefineContainer = make(SDefineContainerType)
-
-// createServiceHandlerInterfaceFun 创建服务处理句柄的函数类型
-type createServiceHandlerInterfaceFun func(*beego.Controller) SHandlerInterface
-
-// SHandlerContainer 服务处理句柄容器
-var SHandlerContainer = make(map[string]createServiceHandlerInterfaceFun)
-
 // SController 服务控制器基类
 type SController struct {
 	beego.Controller
 }
+
+// SDefineContainer 服务定义容器
+var SDefineContainer = make(SDefineContainerType)
 
 // reloadSrvMetaFromDatabase 从数据库中加载服务定义信息
 func (c *SController) reloadSrvMetaFromDatabase(cnt string) (*SDefine, error) {
@@ -110,43 +110,28 @@ func (c *SController) DoSrv() {
 	//默认是从数据库获取
 	sdef, err := c.reloadSrvMetaFromDatabase(cnt)
 	if err != nil {
-		r := mgr.CreateRestResult(false)
-		r["msg"] = err.Error()
-		c.Data["json"] = r
-		c.ServeJSON()
+		utils.CreateErrorResponse(err.Error(), &c.Controller)
 		return
 	}
 	if !sdef.Enabled {
-		r := mgr.CreateRestResult(false)
-		r["msg"] = "请求的服务未启用"
-		c.Data["json"] = r
-		c.ServeJSON()
+		utils.CreateErrorResponse("请求的服务未启用", &c.Controller)
 		return
 	}
 	if sdef.Security {
 		// 处理访问控制
-		userid, err := mgr.GetTokenServiceInstance().VerifyToken(&c.Controller)
+		userid, err := GetTokenServiceInstance().VerifyToken(&c.Controller)
 		if err != nil {
-			r := mgr.CreateRestResult(false)
-			r["msg"] = err.Error()
-			c.Data["json"] = r
-			c.ServeJSON()
+			utils.CreateErrorResponse(err.Error(), &c.Controller)
 			return
 		}
-		if !mgr.GetTokenServiceInstance().VerifyService(userid, sdef.ServiceId, 0) {
-			r := mgr.CreateRestResult(false)
-			r["msg"] = "未授权的请求"
-			c.Data["json"] = r
-			c.ServeJSON()
+		if !GetTokenServiceInstance().VerifyService(userid, sdef.ServiceId, 0) {
+			utils.CreateErrorResponse("未授权的请求", &c.Controller)
 			return
 		}
 	}
 	handler, ok := SHandlerContainer[sdef.ServiceType]
 	if !ok {
-		r := mgr.CreateRestResult(false)
-		r["msg"] = "没有找到" + sdef.ServiceType + "定义的服务接口处理程序"
-		c.Data["json"] = r
-		c.ServeJSON()
+		utils.CreateErrorResponse("没有找到"+sdef.ServiceType+"定义的服务接口处理程序", &c.Controller)
 		return
 	}
 	h := handler(&c.Controller)
