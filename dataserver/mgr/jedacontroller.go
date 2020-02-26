@@ -3,7 +3,6 @@ package mgr
 import (
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/logs"
-	"github.com/astaxie/beego/orm"
 	"github.com/skip2/go-qrcode"
 	"strconv"
 	"tongserver.dataserver/datasource"
@@ -169,27 +168,7 @@ func (c *JedaController) GetIdsList() {
 
 // GetMenu 返回菜单信息
 func (c *JedaController) GetMenu() {
-	if !c.ControllerWithVerify.Verifty(&c.Controller) {
-		return
-	}
-	var maps []orm.Params
-	o := orm.NewOrm()
-	pid := c.Input().Get("pid")
-	if pid == "" {
-		_, err := o.Raw("SELECT MENU_ID,PARENT_MENU_ID,MENU_NAME,MENU_URL from JEDA_MENU where PARENT_MENU_ID is NULL").Values(&maps)
-		if err != nil {
-			utils.CreateErrorResponseByError(err, &c.Controller)
-			return
-		}
-	} else {
-		_, err := o.Raw("SELECT MENU_ID,PARENT_MENU_ID,MENU_NAME,MENU_URL from JEDA_MENU where PARENT_MENU_ID=?", pid).Values(&maps)
-		if err != nil {
-			utils.CreateErrorResponseByError(err, &c.Controller)
-			return
-		}
-	}
-	c.Data["json"] = maps
-	c.ServeJSON()
+
 }
 
 // DoSrv
@@ -203,18 +182,18 @@ func (c *JedaController) DoSrv() {
 		utils.CreateErrorResponse("没有找到请求的服务,"+cnt, &c.Controller)
 		return
 	}
-
-	// 处理访问控制
-	userid, err := service.GetTokenServiceInstance().VerifyToken(&c.Controller)
-	if err != nil {
-		utils.CreateErrorResponse(err.Error(), &c.Controller)
-		return
+	if sdef.Security {
+		// 处理访问控制
+		userid, err := service.GetTokenServiceInstance().VerifyToken(&c.Controller)
+		if err != nil {
+			utils.CreateErrorResponse(err.Error(), &c.Controller)
+			return
+		}
+		if !service.GetTokenServiceInstance().VerifyService(userid, sdef.ServiceId, 0) {
+			utils.CreateErrorResponse("未授权的请求", &c.Controller)
+			return
+		}
 	}
-	if !service.GetTokenServiceInstance().VerifyService(userid, sdef.ServiceId, 0) {
-		utils.CreateErrorResponse("未授权的请求", &c.Controller)
-		return
-	}
-
 	h := &service.IDSServiceHandler{service.SHandlerBase{Ctl: &c.Controller}}
 	h.DoSrv(sdef, h)
 }

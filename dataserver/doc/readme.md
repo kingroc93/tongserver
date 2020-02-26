@@ -419,3 +419,56 @@ type IDataSource interface {
 	}]
 }
 ```
+
+Insert 
+```json
+{
+  "insert":{
+		"ID":        "6bdfbad3-20ab-4610-8dcb-80413a09ef55",
+		"DBTYPE":    "mysql22222",
+		"DBURL":     "{username}:{password}@tcp(127.0.0.1:3306)/pest",
+		"USERNAME":  "tong",
+		"PWD":       "123456",
+		"PROJECTID": "",
+		"DBALIAS":   "pest"
+		}
+}
+```
+
+update
+```json
+{
+  "update":{
+		"ID":        "6bdfbad3-20ab-4610-8dcb-80413a09ef55",
+		"DBTYPE":    "mysql33333",
+		"DBURL":     "{username}:{password}@tcp(127.0.0.1:3306)/pest",
+		"USERNAME":  "tong",
+		"PWD":       "123456",
+		"PROJECTID": "",
+		"DBALIAS":   "pest"
+		},
+   "Criteria": [
+    {
+      "field": "ID",
+      "operation": "=",
+      "value": "6bdfbad3-20ab-4610-8dcb-80413a09ef55",
+      "relation": "and"
+    }
+  ]
+}
+```
+delete
+```json
+{
+  "delete":"true",
+   "Criteria": [
+    {
+      "field": "ID",
+      "operation": "=",
+      "value": "6bdfbad3-20ab-4610-8dcb-80413a09ef55",
+      "relation": "and"
+    }
+  ]
+}
+```
+

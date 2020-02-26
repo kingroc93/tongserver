@@ -3,6 +3,8 @@ package service
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/rs/xid"
+
 	"reflect"
 	"strconv"
 	"strings"
@@ -233,6 +235,11 @@ func (c *IDSServiceHandler) doInsert(sdef *SDefine, ids datasource.IDataSource, 
 			return
 		}
 		values := c.getVauleMapFromStringMap(rBody.Insert, ids)
+		for k, v := range values {
+			if v == "newguid()" {
+				values[k] = xid.New().String()
+			}
+		}
 		if values == nil {
 			return
 		}

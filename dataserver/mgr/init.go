@@ -34,7 +34,7 @@ func createService(cnt string, idsname string) *service.SDefine {
 		Namespace:   ps[0],
 		Enabled:     true,
 		MsgLog:      false,
-		Security:    true,
+		Security:    false,
 		Meta:        "{\"ids\": \"" + idsname + "\"}",
 		ProjectId:   projectid}
 	return srv
@@ -54,15 +54,6 @@ func createDefaultService() {
 	JedaSrvContainer["jeda.project"] = createService("jeda.user", "default.mgr.G_PROJECT")
 	JedaSrvContainer["jeda.ids"] = createService("jeda.user", "default.mgr.G_IDS")
 	JedaSrvContainer["jeda.databaseurl"] = createService("jeda.user", "default.mgr.G_DATABASEURL")
-
-	//Role Service
-	//Org Service
-	//DataBaseUrl Service
-	//Meta Service
-	//MetaItem Service
-	//UserProject Service
-	//UserService Service
-
 }
 
 func init() {
@@ -74,7 +65,7 @@ func init() {
 	//beego.Router("/jeda/reloadmeta", &JedaController{}, "get:ReloadMetaData")
 	//beego.Router("/jeda/testdbconn", &JedaController{}, "get:Testdbconn")
 
-	beego.Router("/jeda/?:context/?:action", &JedaController{}, "get,post:DoSrv")
+	beego.Router("/mgr/?:context/?:action", &JedaController{}, "get,post:DoSrv")
 
 	//JWT Request
 	beego.Router("/token/verify", &SecurityController{}, "post:VerifyToken")
