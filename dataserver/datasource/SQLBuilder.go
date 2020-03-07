@@ -26,7 +26,9 @@ const (
 	// OperBetween 介于--之间
 	OperBetween string = "BETWEEN"
 	// OperIn 包含
-	OperIn string = "in"
+	OperIn        string = "in"
+	OperIsNull    string = "is null"
+	OperIsNotNull string = "is not null"
 )
 
 const (
@@ -234,6 +236,14 @@ func (c *MySQLSQLBuileder) createWhereSubStr() (string, []interface{}) {
 						param = append(param, cr.Value)
 					}
 				}
+			}
+		case OperIsNull:
+			{
+				exp = fmt.Sprint(c.tableName, ".", cr.PropertyName, " is null ")
+			}
+		case OperIsNotNull:
+			{
+				exp = fmt.Sprint(c.tableName, ".", cr.PropertyName, " is not null ")
 			}
 		default:
 			{

@@ -19,7 +19,7 @@ type SecurityController struct {
 }
 
 func (c *ControllerWithVerify) Verifty(ctl *beego.Controller) bool {
-	_, err := service.GetTokenServiceInstance().VerifyToken(ctl)
+	_, err := service.GetISevurityServiceInstance().VerifyToken(ctl)
 	if err != nil {
 		r := utils.CreateRestResult(false)
 		r["msg"] = err.Error()
@@ -77,7 +77,7 @@ func (c *SecurityController) CreateToken() {
 		pwd = rbody.Password
 	}
 
-	t, err := service.GetTokenServiceInstance().CreateToken(uname, pwd)
+	t, err := service.GetISevurityServiceInstance().CreateToken(uname, pwd)
 	if err == nil {
 		c.Data["json"] = map[string]interface{}{"result": true, "token": t}
 		c.ServeJSON()

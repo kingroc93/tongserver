@@ -20,7 +20,7 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 func TestJeda(t *testing.T) {
-	r, err := GetTokenServiceInstance().GetRoleByUserid("lvxing")
+	r, err := GetISevurityServiceInstance().GetRoleByUserid("lvxing")
 	if err != nil {
 		fmt.Println(err.Error())
 		return
@@ -31,10 +31,10 @@ func TestJeda(t *testing.T) {
 }
 
 func TestTokenService_VerifyService(t *testing.T) {
-	b := GetTokenServiceInstance().VerifyService("lvxing", "26d7e145-9d6f-434c-973d-7ef191322545", 255)
+	b := GetISevurityServiceInstance().VerifyService("lvxing", "26d7e145-9d6f-434c-973d-7ef191322545", 255)
 	fmt.Println(b)
-	b = GetTokenServiceInstance().VerifyService("lvxing", "26d7e145-9d6f-434c-973d-7ef191322545", 255)
+	b = GetISevurityServiceInstance().VerifyService("lvxing", "26d7e145-9d6f-434c-973d-7ef191322545", 255)
 	fmt.Println(b)
-	b = GetTokenServiceInstance().VerifyService("lvxing", "26d7e145-9d6f-434c-973d-7ef191322545", 255)
+	b = GetISevurityServiceInstance().VerifyService("lvxing", "26d7e145-9d6f-434c-973d-7ef191322545", 255)
 	fmt.Println(b)
 }

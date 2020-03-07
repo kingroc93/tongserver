@@ -3,26 +3,11 @@ package mgr
 import (
 	"github.com/astaxie/beego"
 	"strings"
-	"tongserver.dataserver/datasource"
 	"tongserver.dataserver/service"
 )
 
 var JedaSrvContainer = make(service.SDefineContainerType)
 
-// createDefaultDataIDs 注册默认数据源，这些数据源用于系统管理
-func CreateDefaultDataIDs() {
-	var meta map[string]interface{}
-	tablesname := []string{"G_META", "G_META_ITEM", "JEDA_USER", "JEDA_ROLE", "JEDA_ROLE_USER", "JEDA_ORG", "JEDA_MENU",
-		"G_USERSERVICE", "G_USERPROJECT", "G_SERVICE", "G_PROJECT", "G_IDS", "G_DATABASEURL"}
-	for _, name := range tablesname {
-		meta = map[string]interface{}{
-			"name":      "default.mgr." + name,
-			"inf":       "CreateWriteableTableDataSource",
-			"dbalias":   "default",
-			"tablename": name}
-		datasource.IDSContainer[meta["name"].(string)] = meta
-	}
-}
 func createService(cnt string, idsname string) *service.SDefine {
 	ps := strings.Split(cnt, ".")
 	projectid := "00000000-0000-0000-0000-000000000000"
@@ -34,7 +19,7 @@ func createService(cnt string, idsname string) *service.SDefine {
 		Namespace:   ps[0],
 		Enabled:     true,
 		MsgLog:      false,
-		Security:    false,
+		Security:    true,
 		Meta:        "{\"ids\": \"" + idsname + "\"}",
 		ProjectId:   projectid}
 	return srv
@@ -58,15 +43,7 @@ func createDefaultService() {
 
 func init() {
 	createDefaultService()
-	// jeda manage
-	//beego.Router("/jeda/menu", &JedaController{}, "get:GetMenu")
-	//beego.Router("/jeda/srvs", &JedaController{}, "get:GetSrvs")
-	//beego.Router("/jeda/ids", &JedaController{}, "get:GetIdsList")
-	//beego.Router("/jeda/reloadmeta", &JedaController{}, "get:ReloadMetaData")
-	//beego.Router("/jeda/testdbconn", &JedaController{}, "get:Testdbconn")
-
 	beego.Router("/mgr/?:context/?:action", &JedaController{}, "get,post:DoSrv")
-
 	//JWT Request
 	beego.Router("/token/verify", &SecurityController{}, "post:VerifyToken")
 	beego.Router("/token/create", &SecurityController{}, "post:CreateToken")

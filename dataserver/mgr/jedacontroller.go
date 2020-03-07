@@ -184,12 +184,12 @@ func (c *JedaController) DoSrv() {
 	}
 	if sdef.Security {
 		// 处理访问控制
-		userid, err := service.GetTokenServiceInstance().VerifyToken(&c.Controller)
+		userid, err := service.GetISevurityServiceInstance().VerifyToken(&c.Controller)
 		if err != nil {
 			utils.CreateErrorResponse(err.Error(), &c.Controller)
 			return
 		}
-		if !service.GetTokenServiceInstance().VerifyService(userid, sdef.ServiceId, 0) {
+		if !service.GetISevurityServiceInstance().VerifyService(userid, sdef.ServiceId, 0) {
 			utils.CreateErrorResponse("未授权的请求", &c.Controller)
 			return
 		}

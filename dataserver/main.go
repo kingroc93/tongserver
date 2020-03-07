@@ -21,6 +21,21 @@ import (
 
 var mu sync.Mutex
 
+// createDefaultDataIDs 注册默认数据源，这些数据源用于系统管理
+func CreateDefaultDataIDs() {
+	var meta map[string]interface{}
+	tablesname := []string{"G_META", "G_META_ITEM", "JEDA_USER", "JEDA_ROLE", "JEDA_ROLE_USER", "JEDA_ORG", "JEDA_MENU",
+		"G_USERSERVICE", "G_USERPROJECT", "G_SERVICE", "G_PROJECT", "G_IDS", "G_DATABASEURL"}
+	for _, name := range tablesname {
+		meta = map[string]interface{}{
+			"name":      "default.mgr." + name,
+			"inf":       "CreateWriteableTableDataSource",
+			"dbalias":   "default",
+			"tablename": name}
+		datasource.IDSContainer[meta["name"].(string)] = meta
+	}
+}
+
 // 注册数据源
 func reloadDBUrl() error {
 	ids := datasource.CreateTableDataSource("DBURL", "default", "G_DATABASEURL")
@@ -55,7 +70,7 @@ func reloadIds() error {
 		return err
 	}
 	datasource.IDSContainer = make(datasource.IDSContainerType)
-	mgr.CreateDefaultDataIDs()
+	CreateDefaultDataIDs()
 	for _, row := range rs.Data {
 		meta := make(map[string]interface{})
 		err := json.Unmarshal([]byte(row[rs.Fields["META"].Index].(string)), &meta)

@@ -6,7 +6,6 @@ import (
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/context"
 	"github.com/astaxie/beego/logs"
-	"github.com/astaxie/beego/orm"
 	"github.com/rs/xid"
 	"strings"
 	"sync"
@@ -36,14 +35,15 @@ var tokenService ISevurityService
 var once sync.Once
 
 // GetTokenServiceInstance 创建一个令牌服务
-func GetTokenServiceInstance() ISevurityService {
+func GetISevurityServiceInstance() ISevurityService {
 	once.Do(func() {
 		tokenService = &TokenService{}
 	})
 	return tokenService
 }
 
-// GetRoleByUserid 返回用户的角色信息
+//  返回用户的角色信息
+// 角色信息放入缓存，缓存key为utils.CACHE_PREFIX_SERVICEACCESS + "ROLE" + userid
 func (c *TokenService) GetRoleByUserid(userid string) (utils.StringSet, error) {
 	var rolemap interface{}
 	rolemap = utils.JedaDataCache.Get(utils.CACHE_PREFIX_SERVICEACCESS + "ROLE" + userid)
@@ -122,13 +122,19 @@ func (c *TokenService) VerifyService(userid string, serviceid string, rightmask 
 
 // checkPwd 检验密码
 func (c *TokenService) checkPwd(u string, p string) bool {
-	o := orm.NewOrm()
-	var maps []orm.Params
-	_, err := o.Raw("SELECT USER_ID FROM JEDA_USER WHERE LOGIN_NAME=? and USER_PASSWORD=?", u, p).Values(&maps)
+	src, err := datasource.CreateIDSFromName("default.mgr.JEDA_USER")
 	if err != nil {
+		logs.Error("获取默认数据源时发生错误，数据源名称：default.mgr.JEDA_USER")
 		return false
 	}
-	if len(maps) == 0 {
+	inf := src.(datasource.ICriteriaDataSource)
+	src.(datasource.IFilterAdder).AddCriteria("LOGIN_NAME", datasource.OperEq, u).AndCriteria("USER_PASSWORD", datasource.OperEq, p)
+	rs, err := inf.DoFilter()
+	if err != nil {
+		logs.Error("校验用户名密码时发生错误，" + err.Error())
+		return false
+	}
+	if len(rs.Data) == 0 {
 		return false
 	}
 	return true
