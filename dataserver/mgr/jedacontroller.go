@@ -5,6 +5,7 @@ import (
 	"github.com/astaxie/beego/logs"
 	"github.com/skip2/go-qrcode"
 	"strconv"
+	"strings"
 	"tongserver.dataserver/datasource"
 	"tongserver.dataserver/service"
 	"tongserver.dataserver/utils"
@@ -70,7 +71,7 @@ func ReloadMetaData() error {
 
 // ReloadMetaData 重新加载元数据
 func (c *JedaController) ReloadMetaData() {
-	if !c.ControllerWithVerify.Verifty(&c.Controller) {
+	if _, ok := c.ControllerWithVerify.Verifty(&c.Controller); !ok {
 		return
 	}
 	err := ReloadMetaData()
@@ -104,15 +105,42 @@ func (c *JedaController) commonCheckGetSrvList() bool {
 	return false
 }
 
+// 返回字典数据
+func (c *JedaController) GetMeta() {
+	if (beego.BConfig.RunMode == beego.PROD) && !c.verifyUserAccess("jeda.metaservice") {
+		return
+	}
+	cnt := c.Ctx.Input.Param(":context")
+	ps := strings.Split(cnt, ".")
+	if len(ps) != 3 {
+		utils.CreateErrorResponse("传入参数格式不正确，PROJECTID.NAMESPACE.METANAME", &c.Controller)
+		return
+	}
+	pid := ps[0]
+	metaname := ps[len(ps)-1]
+	ns := cnt[len(pid)+1 : len(cnt)-len(metaname)-1]
+	sqld := datasource.CreateSQLDataSource("METASEL", "default",
+		"SELECT a.* FROM idb.G_META_ITEM a inner join idb.G_META b on a.META_ID=b.ID and b.projectid=? and b.namespace=? and b.metaname=?")
+	sqld.ParamsValues = []interface{}{pid, ns, metaname}
+	rs, err := sqld.GetAllData()
+	if err != nil {
+		utils.CreateErrorResponse("发生错误"+err.Error(), &c.Controller)
+		return
+	}
+	c.Data["json"] = rs
+	c.ServeJSON()
+}
+
+// 测试链接
 func (c *JedaController) Testdbconn() {
-	if !c.ControllerWithVerify.Verifty(&c.Controller) {
+	if _, ok := c.ControllerWithVerify.Verifty(&c.Controller); !ok {
 		return
 	}
 }
 
 // GetIdsList 返回数据源列表
 func (c *JedaController) GetIdsList() {
-	if !c.ControllerWithVerify.Verifty(&c.Controller) {
+	if _, ok := c.ControllerWithVerify.Verifty(&c.Controller); !ok {
 		return
 	}
 	if c.commonCheckGetSrvList() {
@@ -166,9 +194,138 @@ func (c *JedaController) GetIdsList() {
 	c.ServeJSON()
 }
 
-// GetMenu 返回菜单信息
-func (c *JedaController) GetMenu() {
+// 根据SQL语句和参数返回map
+func (c *JedaController) renderSQL(sql string, ps ...interface{}) ([]interface{}, error) {
+	sqld := datasource.CreateSQLDataSource("", "default", sql)
+	sqld.ParamsValues = ps
+	rs, err := sqld.GetAllData()
+	if err != nil {
+		return nil, err
+	}
+	mr := make([]interface{}, len(rs.Data), len(rs.Data))
+	for i := 0; i < len(rs.Data); i++ {
+		m := c.convertRset2map(rs, i)
+		mr[i] = m
+	}
+	return mr, nil
+}
 
+// 填充用户基本信息
+func (c *JedaController) renderUserinfo(userid string) {
+	obj := datasource.CreateIDSFromParam(datasource.IDSContainer["default.mgr.JEDA_USER"])
+
+	if obj == nil {
+		utils.CreateErrorResponse("没有找到jeda.user数据源", &c.Controller)
+		return
+	}
+	ids := obj.(datasource.ICriteriaDataSource)
+	rs, err := ids.QueryDataByFieldValues(&map[string]interface{}{"USER_ID": userid})
+	if err != nil {
+		utils.CreateErrorResponse(err.Error(), &c.Controller)
+		return
+	}
+	if len(rs.Data) == 0 {
+		utils.CreateErrorResponse("没有找到用户信息"+userid, &c.Controller)
+		return
+	}
+	rest := c.convertRset2map(rs, 0)
+
+	sqld := datasource.CreateSQLDataSource("", "default",
+		"SELECT a.* FROM JEDA_ROLE a inner join JEDA_ROLE_USER b on a.ROLE_ID=b.ROLE_ID and b.USER_ID=?")
+	sqld.ParamsValues = []interface{}{userid}
+	rs, err = sqld.GetAllData()
+	if err != nil {
+		utils.CreateErrorResponse(err.Error(), &c.Controller)
+		return
+	}
+	if len(rs.Data) != 0 {
+		mr := make([]interface{}, len(rs.Data), len(rs.Data))
+		for i := 0; i < len(rs.Data); i++ {
+			m := c.convertRset2map(rs, i)
+			mr[i] = m
+		}
+		rest["roleset"] = mr
+	}
+	r := utils.CreateRestResult(true)
+	r["resultset"] = rest
+	c.Data["json"] = r
+	c.ServeJSON()
+}
+
+// 返回用户在当前系统中的详细信息
+func (c *JedaController) GetCurrentUserInfo() {
+	userid, err := service.GetISevurityServiceInstance().VerifyToken(&c.Controller)
+	if err != nil {
+		utils.CreateErrorResponse(err.Error(), &c.Controller)
+		return
+	}
+	cnt := c.Ctx.Input.Param(":cat")
+	switch cnt {
+	case "info":
+		c.renderUserinfo(userid)
+	case "role":
+		{
+			mr, err := c.renderSQL("SELECT a.* FROM JEDA_ROLE a inner join JEDA_ROLE_USER b on a.ROLE_ID=b.ROLE_ID and b.USER_ID=?", userid)
+			if err != nil {
+				utils.CreateErrorResponse(err.Error(), &c.Controller)
+				return
+			}
+			r := utils.CreateRestResult(true)
+			r["resultset"] = mr
+			c.Data["json"] = r
+			c.ServeJSON()
+		}
+	case "service":
+		{
+			mr, err := c.renderSQL("SELECT * FROM G_SERVICE a inner join G_USERSERVICE b on a.ID=b.SERVICEID inner join JEDA_ROLE_USER c on c.ROLE_ID=b.ROLEID and c.USER_ID=?", userid)
+			if err != nil {
+				utils.CreateErrorResponse(err.Error(), &c.Controller)
+				return
+			}
+			r := utils.CreateRestResult(true)
+			r["resultset"] = mr
+			c.Data["json"] = r
+			c.ServeJSON()
+		}
+	case "project":
+		{
+			mr, err := c.renderSQL("SELECT a.* FROM G_PROJECT a inner join G_USERPROJECT b on a.ID=b.PROJECTID and b.USERID=?", userid)
+			if err != nil {
+				utils.CreateErrorResponse(err.Error(), &c.Controller)
+				return
+			}
+			r := utils.CreateRestResult(true)
+			r["resultset"] = mr
+			c.Data["json"] = r
+			c.ServeJSON()
+		}
+
+	}
+}
+
+// 将结果集由数组的形式转换为map的形式
+func (c *JedaController) convertRset2map(ds *datasource.DataResultSet, index int) map[string]interface{} {
+	d := ds.Data[index]
+	item := make(map[string]interface{})
+	for k, v := range ds.Fields {
+		item[k] = d[v.Index]
+	}
+	return item
+}
+
+// 判断用户是否可以访问服务
+func (c *JedaController) verifyUserAccess(srvid string) bool {
+	// 处理访问控制
+	userid, err := service.GetISevurityServiceInstance().VerifyToken(&c.Controller)
+	if err != nil {
+		utils.CreateErrorResponse(err.Error(), &c.Controller)
+		return false
+	}
+	if !service.GetISevurityServiceInstance().VerifyService(userid, srvid, 0) {
+		utils.CreateErrorResponse("未授权的请求", &c.Controller)
+		return false
+	}
+	return true
 }
 
 // DoSrv
@@ -184,13 +341,7 @@ func (c *JedaController) DoSrv() {
 	}
 	if sdef.Security {
 		// 处理访问控制
-		userid, err := service.GetISevurityServiceInstance().VerifyToken(&c.Controller)
-		if err != nil {
-			utils.CreateErrorResponse(err.Error(), &c.Controller)
-			return
-		}
-		if !service.GetISevurityServiceInstance().VerifyService(userid, sdef.ServiceId, 0) {
-			utils.CreateErrorResponse("未授权的请求", &c.Controller)
+		if !c.verifyUserAccess(sdef.ServiceId) {
 			return
 		}
 	}

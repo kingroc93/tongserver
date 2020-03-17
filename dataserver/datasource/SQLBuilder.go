@@ -71,9 +71,27 @@ const (
 	AggMin int = 5
 )
 
+const (
+	INNER_JOIN = "INNER"
+	INNER_LEFT = "LEFT"
+)
+
+type IAddCriteria interface {
+	AddCriteria(field, operation, complex string, value interface{}) IAddCriteria
+}
+
+// 描述一个Join 字句
+type PieceJoin struct {
+	Join      string
+	TableName string
+	criteria  []*SQLCriteria
+	OutField  []string
+}
+
 // ISQLBuilder SQL构造器接口
 type ISQLBuilder interface {
-	AddCriteria(field, operation, complex string, value interface{}) ISQLBuilder
+	AddCriteria(field, operation, complex string, value interface{}) IAddCriteria
+	AddJoin(jp *PieceJoin)
 	CreateSelectSQL() (string, []interface{})
 	CreateInsertSQLByMap(fieldvalues map[string]interface{}) (string, []interface{})
 	CreateDeleteSQL() (string, []interface{})
@@ -94,10 +112,17 @@ type SQLBuilder struct {
 	columns []string
 	//排序字段
 	orderBy    []string
-	criteria   []SQLCriteria
+	criteria   []*SQLCriteria
+	joinpiece  []*PieceJoin
 	rowsLimit  int
 	rowsOffset int
 	aggre      map[string]*AggreType
+}
+
+// 条件中的特殊值，该类型的值表示引用SQL语句中其他表的字段
+type FieldNameWithTableName struct {
+	Tablename string
+	Fielname  string
 }
 
 // MySQLSQLBuileder MySQl的SQL构造器
@@ -147,6 +172,27 @@ func CreateSQLBuileder(dbType string, tablename string) (ISQLBuilder, error) {
 	return nil, fmt.Errorf("不支持的数据库类型" + dbType)
 }
 
+// AddCriteria
+func (c *PieceJoin) AddCriteria(field, operation, complex string, value interface{}) IAddCriteria {
+	c.criteria = append(c.criteria, &SQLCriteria{
+		PropertyName: field,
+		Operation:    operation,
+		Value:        value,
+		Complex:      complex,
+	})
+	return c
+}
+
+// AddJoin
+func (c *MySQLSQLBuileder) AddJoin(jp *PieceJoin) {
+	mu.Lock()
+	defer mu.Unlock()
+	if c.joinpiece == nil {
+		c.joinpiece = make([]*PieceJoin, 0, 2)
+	}
+	c.joinpiece = append(c.joinpiece, jp)
+}
+
 // CreateKeyFieldsSQL 返回查询数据库表主键信息的SQL语句
 func (c *MySQLSQLBuileder) CreateKeyFieldsSQL() string {
 	if c.objectTable == "" {
@@ -180,13 +226,13 @@ func (c *MySQLSQLBuileder) AddAggre(outfield string, aggreType *AggreType) {
 }
 
 // AddCriteria 删除条件
-func (c *MySQLSQLBuileder) AddCriteria(field, operation, complex string, value interface{}) ISQLBuilder {
+func (c *MySQLSQLBuileder) AddCriteria(field, operation, complex string, value interface{}) IAddCriteria {
 	mu.Lock()
 	defer mu.Unlock()
 	if c.criteria == nil {
-		c.criteria = make([]SQLCriteria, 0, 10)
+		c.criteria = make([]*SQLCriteria, 0, 10)
 	}
-	c.criteria = append(c.criteria, SQLCriteria{
+	c.criteria = append(c.criteria, &SQLCriteria{
 		PropertyName: field,
 		Operation:    operation,
 		Value:        value,
@@ -195,11 +241,15 @@ func (c *MySQLSQLBuileder) AddCriteria(field, operation, complex string, value i
 	return c
 }
 
-// createWhereSubStr 创建查询Where语句
-func (c *MySQLSQLBuileder) createWhereSubStr() (string, []interface{}) {
+// 生成条件子句
+func (c *MySQLSQLBuileder) createCriteriaSubStr(tableName string, criteria []*SQLCriteria) (string, []interface{}) {
 	var sqlwhere string
-	param := make([]interface{}, 0, len(c.criteria))
-	for i, cr := range c.criteria {
+	param := make([]interface{}, 0, len(criteria))
+	for i, cr := range criteria {
+		fieldname := tableName + "." + cr.PropertyName
+		if strings.Contains(cr.PropertyName, ".") {
+			fieldname = cr.PropertyName
+		}
 		var exp string
 		switch cr.Operation {
 		case OperBetween:
@@ -210,8 +260,18 @@ func (c *MySQLSQLBuileder) createWhereSubStr() (string, []interface{}) {
 					if s.Len() != 2 {
 						panic("the BETWEEN operation in SQLBuilder the params must be array or slice, and length must be 2")
 					}
-					param = append(param, s.Index(0).Interface(), s.Index(1).Interface())
-					exp = fmt.Sprint(c.tableName, ".", cr.PropertyName, " BETWEEN ? and ?")
+					if f, ok := interface{}(s.Index(0).Interface()).(*FieldNameWithTableName); ok {
+						exp = fmt.Sprint(fieldname, " BETWEEN "+f.Tablename+"."+f.Fielname+" and ")
+					} else {
+						exp = fmt.Sprint(fieldname, " BETWEEN ? and ")
+						param = append(param, s.Index(0).Interface())
+					}
+					if f, ok := interface{}(s.Index(1).Interface()).(*FieldNameWithTableName); ok {
+						exp = exp + f.Tablename + "." + f.Fielname
+					} else {
+						exp = exp + "?"
+						param = append(param, s.Index(1).Interface())
+					}
 				default:
 					{
 						panic("the BETWEEN operation in SQLBuilder the params must be array or slice, and length must be 2")
@@ -229,26 +289,30 @@ func (c *MySQLSQLBuileder) createWhereSubStr() (string, []interface{}) {
 						param = append(param, s.Index(si).Interface())
 					}
 					ins = strings.TrimRight(ins, ",")
-					exp = fmt.Sprint(c.tableName, ".", cr.PropertyName, " in (", ins, ")")
+					exp = fmt.Sprint(fieldname, " in (", ins, ")")
 				default:
 					{
-						exp = fmt.Sprint(c.tableName, ".", cr.PropertyName, " in (?)")
+						exp = fmt.Sprint(fieldname, " in (?)")
 						param = append(param, cr.Value)
 					}
 				}
 			}
 		case OperIsNull:
 			{
-				exp = fmt.Sprint(c.tableName, ".", cr.PropertyName, " is null ")
+				exp = fmt.Sprint(fieldname, " is null ")
 			}
 		case OperIsNotNull:
 			{
-				exp = fmt.Sprint(c.tableName, ".", cr.PropertyName, " is not null ")
+				exp = fmt.Sprint(fieldname, " is not null ")
 			}
 		default:
 			{
-				exp = fmt.Sprint(c.tableName, ".", cr.PropertyName, cr.Operation, "?")
-				param = append(param, cr.Value)
+				if f, ok := interface{}(cr.Value).(*FieldNameWithTableName); ok {
+					exp = fmt.Sprint(fieldname, cr.Operation, f.Tablename, ".", f.Fielname)
+				} else {
+					exp = fmt.Sprint(fieldname, cr.Operation, "?")
+					param = append(param, cr.Value)
+				}
 			}
 		}
 		if i != 0 {
@@ -260,6 +324,12 @@ func (c *MySQLSQLBuileder) createWhereSubStr() (string, []interface{}) {
 		}
 	}
 	//sql += " WHERE " + sqlwhere
+	return sqlwhere, param
+}
+
+// createWhereSubStr 创建查询Where语句
+func (c *MySQLSQLBuileder) createWhereSubStr() (string, []interface{}) {
+	sqlwhere, param := c.createCriteriaSubStr(c.tableName, c.criteria)
 	return " WHERE " + sqlwhere, param
 }
 
@@ -315,6 +385,27 @@ func (c *MySQLSQLBuileder) CreateInsertSQLByMap(fieldvalues map[string]interface
 	return sql, params
 }
 
+//处理链接
+// inner join tablename on .......
+func (c *MySQLSQLBuileder) createJoinSubStr() (string, []interface{}) {
+	sql := ""
+	ps := make([]interface{}, 0, 1)
+	for _, pie := range c.joinpiece {
+		if len(pie.criteria) == 0 {
+			continue
+		}
+		if pie.Join == INNER_JOIN {
+			sql += " inner join " + pie.TableName + " on "
+		} else {
+			sql += " left join " + pie.TableName + " on "
+		}
+		sqlwhere, param := c.createCriteriaSubStr(c.tableName, pie.criteria)
+		sql += sqlwhere
+		ps = append(ps, param)
+	}
+	return sql, ps
+}
+
 // CreateSelectSQL 创建Select语句
 func (c *MySQLSQLBuileder) CreateSelectSQL() (string, []interface{}) {
 	if c.objectTable != "" &&
@@ -324,6 +415,7 @@ func (c *MySQLSQLBuileder) CreateSelectSQL() (string, []interface{}) {
 		len(c.orderBy) == 0 &&
 		len(c.aggre) == 0 &&
 		(len(c.columns) == 0 || c.columns[0] == "*") {
+		//符合上面条件的时候objectTable就是一条SQL语句，直接返回
 		return c.objectTable, nil
 	}
 	var sql = "SELECT "
@@ -373,17 +465,29 @@ func (c *MySQLSQLBuileder) CreateSelectSQL() (string, []interface{}) {
 			sql += fs
 		}
 	}
+	if len(c.joinpiece) != 0 {
+		for _, jin := range c.joinpiece {
+			if len(jin.OutField) == 0 {
+				continue
+			}
+			for _, of := range jin.OutField {
+				sql += "," + jin.TableName + "." + of
+			}
+		}
+	}
 	if c.objectTable == "" {
 		sql += " FROM " + c.tableName
 	} else {
 		sql += " FROM (" + c.objectTable + ") as " + c.tableName
 	}
-	if c.criteria != nil {
-		where, ps := c.createWhereSubStr()
-		sql += where
-		param = append(param, ps...)
-	}
 
+	//处理链接
+	// inner join tablename on .......
+	if len(c.joinpiece) != 0 {
+		insql, ps := c.createJoinSubStr()
+		sql += insql
+		param = append(param, ps)
+	}
 	if len(groupFields) != 0 {
 		var grs string
 		for index, gr := range groupFields {

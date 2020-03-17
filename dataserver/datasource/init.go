@@ -40,6 +40,12 @@ type ICriteriaDataSource interface {
 	DoFilter() (*DataResultSet, error)
 }
 
+// 支持内连接和外链接的数据源
+type IJoinedDataSource interface {
+	ICriteriaDataSource
+	JoinDataSource(join string, ds ICriteriaDataSource, outfield []string) IAddCriteria
+}
+
 // IFilterAdder 过滤条件接口
 type IFilterAdder interface {
 	AddCriteria(field, operation string, value interface{}) IFilterAdder

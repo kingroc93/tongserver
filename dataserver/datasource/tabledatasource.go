@@ -13,6 +13,27 @@ import (
 type TableDataSource struct {
 	DBDataSource
 	TableName string
+	joinpiece []*PieceJoin
+}
+
+func (c *TableDataSource) JoinDataSource(join string, ds ICriteriaDataSource, outfield []string) IAddCriteria {
+	var inf interface{}
+	inf = ds
+	dts, ok := inf.(TableDataSource)
+	if !ok {
+		logs.Error("'ds ICriteriaDataSource' param must be TableDataSource")
+		panic("'ds ICriteriaDataSource' param must be TableDataSource")
+	}
+	if c.joinpiece == nil {
+		c.joinpiece = make([]*PieceJoin, 0, 2)
+	}
+	i := &PieceJoin{
+		Join:      join,
+		TableName: dts.TableName,
+		criteria:  make([]*SQLCriteria, 0, 1),
+		OutField:  outfield}
+	c.joinpiece = append(c.joinpiece, i)
+	return i
 }
 
 // fillColumn 填充列信息
@@ -72,7 +93,16 @@ func (c *TableDataSource) fillKeyFields() error {
 
 // createSQLBuilder 创建SQL构造器
 func (c *TableDataSource) createSQLBuilder() (ISQLBuilder, error) {
-	return CreateSQLBuileder2(DBAlias2DBTypeContainer[c.DBAlias], c.TableName, c.convertPropertys2Cols(c.Field), c.orderlist, c.RowsLimit, c.RowsOffset)
+	sqb, err := CreateSQLBuileder2(DBAlias2DBTypeContainer[c.DBAlias], c.TableName, c.convertPropertys2Cols(c.Field), c.orderlist, c.RowsLimit, c.RowsOffset)
+	if err != nil {
+		return nil, err
+	}
+	if len(c.joinpiece) != 0 {
+		for _, p := range c.joinpiece {
+			sqb.AddJoin(p)
+		}
+	}
+	return sqb, nil
 }
 
 // GetDataSourceType 返回数据源类型

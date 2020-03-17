@@ -18,24 +18,26 @@ type SecurityController struct {
 	ControllerWithVerify
 }
 
-func (c *ControllerWithVerify) Verifty(ctl *beego.Controller) bool {
-	_, err := service.GetISevurityServiceInstance().VerifyToken(ctl)
+func (c *ControllerWithVerify) Verifty(ctl *beego.Controller) (string, bool) {
+	userid, err := service.GetISevurityServiceInstance().VerifyToken(ctl)
 	if err != nil {
 		r := utils.CreateRestResult(false)
 		r["msg"] = err.Error()
 		ctl.Data["json"] = r
 		ctl.ServeJSON()
-		return false
+		return "", false
 	}
-	return true
+	return userid, true
 }
 
 // VerifyToken 验证令牌是否合法的web api
 func (c *SecurityController) VerifyToken() {
-	if !c.Verifty(&c.Controller) {
+	userid, ok := c.Verifty(&c.Controller)
+	if !ok {
 		return
 	}
 	result := utils.CreateRestResult(true)
+	result["current"] = userid
 	c.Data["json"] = result
 	c.ServeJSON()
 }

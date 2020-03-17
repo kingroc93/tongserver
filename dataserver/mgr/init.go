@@ -11,6 +11,7 @@ var JedaSrvContainer = make(service.SDefineContainerType)
 func createService(cnt string, idsname string) *service.SDefine {
 	ps := strings.Split(cnt, ".")
 	projectid := "00000000-0000-0000-0000-000000000000"
+	sec := beego.BConfig.RunMode == beego.PROD
 	srv := &service.SDefine{
 		ServiceId:   "JEDA_SRV_" + cnt,
 		Context:     ps[1],
@@ -19,7 +20,7 @@ func createService(cnt string, idsname string) *service.SDefine {
 		Namespace:   ps[0],
 		Enabled:     true,
 		MsgLog:      false,
-		Security:    true,
+		Security:    sec,
 		Meta:        "{\"ids\": \"" + idsname + "\"}",
 		ProjectId:   projectid}
 	return srv
@@ -44,6 +45,8 @@ func createDefaultService() {
 func init() {
 	createDefaultService()
 	beego.Router("/mgr/?:context/?:action", &JedaController{}, "get,post:DoSrv")
+	beego.Router("/meta/?:context", &JedaController{}, "get,post:GetMeta")
+	beego.Router("/jeda/user/?:cat", &JedaController{}, "get,post:GetCurrentUserInfo")
 	//JWT Request
 	beego.Router("/token/verify", &SecurityController{}, "post:VerifyToken")
 	beego.Router("/token/create", &SecurityController{}, "post:CreateToken")

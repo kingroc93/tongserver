@@ -90,7 +90,6 @@ func reloadIds() error {
 
 func main() {
 	logs.SetLogger("console")
-
 	logs.Info("====================================================================")
 	u1 := uuid.Must(uuid.NewV4(), nil)
 	logs.Info(u1.String())
