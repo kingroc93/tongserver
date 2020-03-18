@@ -488,6 +488,13 @@ func (c *MySQLSQLBuileder) CreateSelectSQL() (string, []interface{}) {
 		sql += insql
 		param = append(param, ps)
 	}
+
+	if c.criteria != nil {
+		where, ps := c.createWhereSubStr()
+		sql += where
+		param = append(param, ps...)
+	}
+
 	if len(groupFields) != 0 {
 		var grs string
 		for index, gr := range groupFields {
