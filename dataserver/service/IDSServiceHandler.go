@@ -103,7 +103,7 @@ func (c *IDSServiceHandler) getCache(sdef *SDefine, ids datasource.IDataSource, 
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 返回缓存的结果数据
-func (c *IDSServiceHandler) doGetCache(sdef *SDefine, ids datasource.IDataSource, rBody *SRequestBody) {
+func (c *IDSServiceHandler) doGetCache(sdef *SDefine, meta map[string]interface{}, ids datasource.IDataSource, rBody *SRequestBody) {
 	r, err := c.getCache(sdef, ids, rBody)
 	if r != nil {
 		(*r)["result"] = true
@@ -169,7 +169,7 @@ func (c *IDSServiceHandler) getVauleMapFromStringMap(svalue map[string]string, i
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 处理删除
-func (c *IDSServiceHandler) doDelete(sdef *SDefine, ids datasource.IDataSource, rBody *SRequestBody) {
+func (c *IDSServiceHandler) doDelete(sdef *SDefine, meta map[string]interface{}, ids datasource.IDataSource, rBody *SRequestBody) {
 	if inf := c.checkMethodAndWriteableInf(ids); inf != nil {
 		if rBody.Delete != "true" {
 			c.createErrorResponse("报文Delete节点的值必须为true")
@@ -196,7 +196,7 @@ func (c *IDSServiceHandler) doDelete(sdef *SDefine, ids datasource.IDataSource, 
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //处理更新
-func (c *IDSServiceHandler) doUpdate(sdef *SDefine, ids datasource.IDataSource, rBody *SRequestBody) {
+func (c *IDSServiceHandler) doUpdate(sdef *SDefine, meta map[string]interface{}, ids datasource.IDataSource, rBody *SRequestBody) {
 	if inf := c.checkMethodAndWriteableInf(ids); inf != nil {
 		if rBody.Update == nil {
 			c.createErrorResponse("报文没有update节点")
@@ -228,7 +228,7 @@ func (c *IDSServiceHandler) doUpdate(sdef *SDefine, ids datasource.IDataSource, 
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 处理添加
-func (c *IDSServiceHandler) doInsert(sdef *SDefine, ids datasource.IDataSource, rBody *SRequestBody) {
+func (c *IDSServiceHandler) doInsert(sdef *SDefine, meta map[string]interface{}, ids datasource.IDataSource, rBody *SRequestBody) {
 	if inf := c.checkMethodAndWriteableInf(ids); inf != nil {
 		if rBody.Insert == nil {
 			c.createErrorResponse("报文没有insert节点")
@@ -255,7 +255,7 @@ func (c *IDSServiceHandler) doInsert(sdef *SDefine, ids datasource.IDataSource, 
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //返回所有数据
-func (c *IDSServiceHandler) doAllData(sdef *SDefine, ids datasource.IDataSource, rBody *SRequestBody) {
+func (c *IDSServiceHandler) doAllData(sdef *SDefine, meta map[string]interface{}, ids datasource.IDataSource, rBody *SRequestBody) {
 	c.setPageParams(ids)
 	resuleset, err := ids.GetAllData()
 	if err != nil {
@@ -581,7 +581,7 @@ func (c *IDSServiceHandler) doPostAction(dataSet *datasource.DataResultSet, rBod
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 处理查询报文
-func (c *IDSServiceHandler) doQuery(sdef *SDefine, ids datasource.IDataSource, rBody *SRequestBody) {
+func (c *IDSServiceHandler) doQuery(sdef *SDefine, meta map[string]interface{}, ids datasource.IDataSource, rBody *SRequestBody) {
 	if rBody == nil {
 		c.createErrorResponse("query操作必须POST方式提交rbody信息")
 		return
@@ -679,7 +679,7 @@ func (c *IDSServiceHandler) getActionMap() map[string]SerivceActionHandler {
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 根据主键返回数据
-func (c *IDSServiceHandler) doGetValueByKey(sdef *SDefine, ids datasource.IDataSource, rBody *SRequestBody) {
+func (c *IDSServiceHandler) doGetValueByKey(sdef *SDefine, meta map[string]interface{}, ids datasource.IDataSource, rBody *SRequestBody) {
 	fs := ids.GetKeyFields()
 	params := make([]interface{}, len(fs), len(fs))
 	for i, f := range fs {

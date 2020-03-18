@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/astaxie/beego"
-	"github.com/astaxie/beego/orm"
 	"github.com/satori/go.uuid"
 	"strconv"
 	"strings"
@@ -23,11 +22,11 @@ type SHandlerInterface interface {
 	//返回请求报文，GET方法没有报文，只处理POST方法的报文
 	getRBody() *SRequestBody
 	//根据元数据返回当前实例处理请求的数据源类，比如TableDataSource
-	getServiceInterface(sdef *SDefine) (interface{}, error)
+	getServiceInterface(meta map[string]interface{}, sdef *SDefine) (interface{}, error)
 }
 
 // SerivceActionHandler 处理请求的方法类型
-type SerivceActionHandler func(sdef *SDefine, ids datasource.IDataSource, rBody *SRequestBody)
+type SerivceActionHandler func(sdef *SDefine, meta map[string]interface{}, ids datasource.IDataSource, rBody *SRequestBody)
 
 // SHandlerBase 服务处理句柄基类
 type SHandlerBase struct {
@@ -35,31 +34,10 @@ type SHandlerBase struct {
 	ActionMap map[string]SerivceActionHandler
 }
 
-// HasRightService 判断是否有权限
-func HasRightService(user string, serviceid string) (bool, error) {
-	var maps []orm.Params
-	o := orm.NewOrm()
-	_, err := o.Raw("select * from G_USERSERVICE where USERID=?", user).Values(&maps)
-	if err != nil {
-		return false, err
-	}
-	if len(maps) == 0 {
-		return false, nil
-	}
-	return true, nil
-}
-
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 根据元数据返回处理服务的接口
-func (c *SHandlerBase) getServiceInterface(sdef *SDefine) (interface{}, error) {
-	metestr := sdef.Meta
-	meta := make(map[string]interface{})
-	err2 := json.Unmarshal([]byte(metestr), &meta)
-	if err2 != nil {
-		return nil, fmt.Errorf("meta信息不正确,应为JSON格式")
-	}
+func (c *SHandlerBase) getServiceInterface(meta map[string]interface{}, sdef *SDefine) (interface{}, error) {
 	idstr := meta["ids"].(string)
-
 	if strings.Index(idstr, ".") == -1 {
 		idstr = sdef.ProjectId + "." + idstr
 	}
@@ -68,10 +46,16 @@ func (c *SHandlerBase) getServiceInterface(sdef *SDefine) (interface{}, error) {
 
 // DoSrv 处理服务请求的入口
 func (c *SHandlerBase) DoSrv(sdef *SDefine, inf SHandlerInterface) {
-
 	//////////////////////////////////////////////////////////////////////////
 	//调用传入的接口中的方法实现下面的功能,因为需要通过不同的接口实现来实现不同的行为
-	obj, err := inf.getServiceInterface(sdef)
+	metestr := sdef.Meta
+	meta := make(map[string]interface{})
+	err2 := json.Unmarshal([]byte(metestr), &meta)
+	if err2 != nil {
+		c.createErrorResponse("meta信息不正确,应为JSON格式")
+		return
+	}
+	obj, err := inf.getServiceInterface(meta, sdef)
 	if err != nil {
 		c.createErrorResponseByError(err)
 		return
@@ -90,7 +74,7 @@ func (c *SHandlerBase) DoSrv(sdef *SDefine, inf SHandlerInterface) {
 		c.createErrorResponse("请求的动作当前服务没有实现")
 		return
 	}
-	f(sdef, ids, rBody)
+	f(sdef, meta, ids, rBody)
 }
 
 func (c *SHandlerBase) getActionMap() map[string]SerivceActionHandler {
@@ -145,7 +129,7 @@ func (c *SHandlerBase) getCache(sdef *SDefine, ids datasource.IDataSource, rBody
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 返回缓存的结果数据
-func (c *SHandlerBase) doGetCache(sdef *SDefine, ids datasource.IDataSource, rBody *SRequestBody) {
+func (c *SHandlerBase) doGetCache(sdef *SDefine, meta map[string]interface{}, ids datasource.IDataSource, rBody *SRequestBody) {
 	r, err := c.getCache(sdef, ids, rBody)
 	if r != nil {
 		(*r)["result"] = true
@@ -159,7 +143,7 @@ func (c *SHandlerBase) doGetCache(sdef *SDefine, ids datasource.IDataSource, rBo
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 返回服务元数据
-func (c *SHandlerBase) doGetMeta(sdef *SDefine, ids datasource.IDataSource, rBody *SRequestBody) {
+func (c *SHandlerBase) doGetMeta(sdef *SDefine, meta map[string]interface{}, ids datasource.IDataSource, rBody *SRequestBody) {
 	r := utils.CreateRestResult(true)
 	sd := make(map[string]interface{})
 	r["servicedefine"] = sd
@@ -170,13 +154,7 @@ func (c *SHandlerBase) doGetMeta(sdef *SDefine, ids datasource.IDataSource, rBod
 	sd["Enabled"] = sdef.Enabled
 	sd["MsgLog"] = sdef.MsgLog
 	sd["Security"] = sdef.Security
-	meta := make(map[string]interface{})
-	err2 := json.Unmarshal([]byte(sdef.Meta), &meta)
-	if err2 == nil {
-		sd["Meta"] = meta
-	} else {
-		sd["Meta"] = sdef.Meta
-	}
+	sd["Meta"] = meta
 
 	imp := []string{"IDataSource"}
 	if _, ok := ids.(datasource.ICriteriaDataSource); ok {

@@ -1,7 +1,6 @@
 package service
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 	"tongserver.dataserver/datasource"
@@ -23,7 +22,7 @@ func (c *ValueKeyService) getRBody() *SRequestBody {
 	return nil
 }
 
-func (c *ValueKeyService) doGetValueByKey(sdef *SDefine, ids datasource.IDataSource, rBody *SRequestBody) {
+func (c *ValueKeyService) doGetValueByKey(sdef *SDefine, meta map[string]interface{}, ids datasource.IDataSource, rBody *SRequestBody) {
 	fs := ids.GetKeyFields()
 	params := make([]interface{}, len(fs), len(fs))
 	for i, f := range fs {
@@ -43,15 +42,8 @@ func (c *ValueKeyService) doGetValueByKey(sdef *SDefine, ids datasource.IDataSou
 	c.ServeJSON()
 }
 
-func (c *ValueKeyService) getServiceInterface(sdef *SDefine) (interface{}, error) {
-	metestr := sdef.Meta
-	meta := make(map[string]interface{})
-	err2 := json.Unmarshal([]byte(metestr), &meta)
-	if err2 != nil {
-		return nil, fmt.Errorf("meta信息不正确,应为JSON格式")
-	}
+func (c *ValueKeyService) getServiceInterface(meta map[string]interface{}, sdef *SDefine) (interface{}, error) {
 	idstr := meta["ids"].(string)
-
 	if strings.Index(idstr, ".") == -1 {
 		idstr = sdef.ProjectId + "." + idstr
 	}

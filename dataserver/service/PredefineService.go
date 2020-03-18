@@ -79,7 +79,7 @@ func (c *PredefineServiceHandler) getRBody() *SRequestBody {
 }
 
 // getServiceInterface 返回该服务需要的数据源接口
-func (c *PredefineServiceHandler) getServiceInterface(sdef *SDefine) (interface{}, error) {
+func (c *PredefineServiceHandler) getServiceInterface(meta map[string]interface{}, sdef *SDefine) (interface{}, error) {
 	if c.predefine.Definetype == "ids" {
 		param := datasource.IDSContainer[c.predefine.Ids]
 		obj := datasource.CreateIDSFromParam(param)
@@ -92,12 +92,12 @@ func (c *PredefineServiceHandler) getServiceInterface(sdef *SDefine) (interface{
 }
 
 // doAllData 返回所有数据
-func (c *PredefineServiceHandler) doAllData(sdef *SDefine, ids datasource.IDataSource, rBody *SRequestBody) {
-	c.IDSServiceHandler.doQuery(sdef, ids, rBody)
+func (c *PredefineServiceHandler) doAllData(sdef *SDefine, meta map[string]interface{}, ids datasource.IDataSource, rBody *SRequestBody) {
+	c.IDSServiceHandler.doQuery(sdef, meta, ids, rBody)
 }
 
 // doGetMeta 返回元数据
-func (c *PredefineServiceHandler) doGetMeta(sdef *SDefine, ids datasource.IDataSource, rBody *SRequestBody) {
+func (c *PredefineServiceHandler) doGetMeta(sdef *SDefine, meta map[string]interface{}, ids datasource.IDataSource, rBody *SRequestBody) {
 	r := utils.CreateRestResult(true)
 	sd := make(map[string]interface{})
 	r["servicedefine"] = sd
@@ -108,13 +108,7 @@ func (c *PredefineServiceHandler) doGetMeta(sdef *SDefine, ids datasource.IDataS
 	sd["Enabled"] = sdef.Enabled
 	sd["MsgLog"] = sdef.MsgLog
 	sd["Security"] = sdef.Security
-	meta := make(map[string]interface{})
-	err2 := json.Unmarshal([]byte(sdef.Meta), &meta)
-	if err2 == nil {
-		sd["Meta"] = meta
-	} else {
-		sd["Meta"] = sdef.Meta
-	}
+	sd["Meta"] = meta
 	c.Ctl.Data["json"] = r
 	c.ServeJSON()
 }
