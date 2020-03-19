@@ -3,12 +3,15 @@ package service
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/astaxie/beego/logs"
+
 	"github.com/rs/xid"
 
 	"reflect"
 	"strconv"
 	"strings"
 	"time"
+
 	"tongserver.dataserver/cube"
 	"tongserver.dataserver/datasource"
 	"tongserver.dataserver/utils"
@@ -253,11 +256,117 @@ func (c *IDSServiceHandler) doInsert(sdef *SDefine, meta map[string]interface{},
 	}
 }
 
+// 处理用户过滤器，添加用户过滤器的服务，用户查询只返回当前用户的信息
+// 根据当前的用户信息对数据进行筛选，通过直接在rBody添加相应的查询条件实现
+// 在服务定义元数据中配置过滤的目标列，以及与用户信息的对照操作
+// 操作为in或者=，为=时条件为目标字段值等于当前用户id
+// 操作为in时，定义目标字段的值包含在idsname定义的数据源中根据userfield等于当前用户id，该数据源必须实现ICriteriaDataSource和IFilterAdder接口
+func (c *IDSServiceHandler) doUserFilter(sdef *SDefine, meta map[string]interface{}, ids datasource.IDataSource, rBody *SRequestBody) bool {
+	if c.CurrentUserId == "" {
+		logs.Error("doUserFilter：当前调用者用户id为空,当前操作被忽略")
+		return false
+	}
+	_, ok := ids.(datasource.ICriteriaDataSource)
+	if !ok {
+		logs.Info("doUserFilter：服务元数据中定义的userfilter节点，但是服务的数据源没有实现ICriteriaDataSource接口，当前操作被忽略")
+		return false
+	}
+	us, ok := meta["userfilter"]
+	/*
+		'userfilter‘:{
+			'filterkey':"过滤目标字段",
+			'oper':'操作',
+			''
+		}
+	*/
+	if !ok {
+		//没有找到userfilter节点，直接返回
+		return false
+	}
+	umap, ok := us.(map[string]interface{})
+	if !ok {
+		return false
+	}
+	dfieldname := umap["filterkey"].(string)
+	doper := umap["opera"].(string)
+	didsname := umap["ids"].(string)
+	userfield := umap["userfield"].(string)
+	if doper == datasource.OperIn || doper == datasource.OperEq {
+		rb := rBody
+		if rBody == nil {
+			rb = &SRequestBody{}
+			rb.Criteria = make([]CriteriaInRBody, 0, 1)
+		}
+		switch doper {
+		case datasource.OperEq:
+			{
+				rb.Criteria = append(rb.Criteria, CriteriaInRBody{
+					Field:     dfieldname,
+					Operation: datasource.OperEq,
+					Value:     c.CurrentUserId,
+					Relation:  datasource.CompAnd})
+				return true
+			}
+		case datasource.OperIn:
+			{
+				obj := datasource.CreateIDSFromParam(datasource.IDSContainer[didsname])
+				if obj == nil {
+					logs.Error("doUserFilter：服务元数据中定义的userfilter节点，中引用的id为" + didsname + "的数据源不存在，的当前操作被忽略")
+					return false
+				}
+				dids, ok := obj.(datasource.IDataSource)
+				if !ok {
+					logs.Error("doUserFilter：服务元数据中定义的userfilter节点，中引用的id为" + didsname + "的数据源没有实现IDataSource接口，的当前操作被忽略")
+					return false
+				}
+				rs, err := dids.QueryDataByFieldValues(&map[string]interface{}{userfield: c.CurrentUserId})
+				if err != nil {
+					logs.Error("doUserFilter：服务元数据中定义的userfilter节点，中引用的id为" + didsname + "的数据源在查询数据时发生错误：" + err.Error())
+					return false
+				}
+				if len(rs.Data) == 0 {
+					rb.Criteria = append(rb.Criteria, CriteriaInRBody{
+						Field:     dfieldname,
+						Operation: datasource.OperEq,
+						Value:     "",
+						Relation:  datasource.CompAnd})
+				} else {
+					var sub = ""
+					for _, user := range rs.Data {
+						if sub != "" {
+							sub += ","
+						}
+						sub += "'" + user[rs.Fields[dfieldname].Index].(string) + "'"
+					}
+					rb.Criteria = append(rb.Criteria, CriteriaInRBody{
+						Field:     dfieldname,
+						Operation: datasource.OperIn,
+						Value:     sub,
+						Relation:  datasource.CompAnd})
+				}
+				return true
+			}
+		}
+	}
+	logs.Info("doUserFilter：服务元数据中定义的userfilter节点，opera属性只能是in或者=，但是当前传入的是" + doper + ",当前方法会被忽略")
+	return false
+}
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //返回所有数据
 func (c *IDSServiceHandler) doAllData(sdef *SDefine, meta map[string]interface{}, ids datasource.IDataSource, rBody *SRequestBody) {
+	var resuleset *datasource.DataResultSet
+	var err error
+	if c.doUserFilter(sdef, meta, ids, rBody) {
+		fids, ok := ids.(datasource.ICriteriaDataSource)
+		if ok {
+			resuleset, err = fids.DoFilter()
+		}
+	} else {
+		resuleset, err = ids.GetAllData()
+	}
 	c.setPageParams(ids)
-	resuleset, err := ids.GetAllData()
+
 	if err != nil {
 		c.createErrorResult(err.Error())
 		return

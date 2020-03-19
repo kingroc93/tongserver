@@ -30,8 +30,9 @@ type SerivceActionHandler func(sdef *SDefine, meta map[string]interface{}, ids d
 
 // SHandlerBase 服务处理句柄基类
 type SHandlerBase struct {
-	Ctl       *beego.Controller
-	ActionMap map[string]SerivceActionHandler
+	Ctl           *beego.Controller
+	ActionMap     map[string]SerivceActionHandler
+	CurrentUserId string
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////

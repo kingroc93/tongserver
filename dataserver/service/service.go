@@ -20,7 +20,7 @@ const (
 )
 
 // createServiceHandlerInterfaceFun 创建服务处理句柄的函数类型
-type createServiceHandlerInterfaceFun func(*beego.Controller) SHandlerInterface
+type createServiceHandlerInterfaceFun func(*beego.Controller, string) SHandlerInterface
 
 // SHandlerContainer 服务处理句柄容器
 var SHandlerContainer = make(map[string]createServiceHandlerInterfaceFun)
@@ -117,9 +117,10 @@ func (c *SController) DoSrv() {
 		utils.CreateErrorResponse("请求的服务未启用", &c.Controller)
 		return
 	}
+	userid := ""
 	if sdef.Security {
 		// 处理访问控制
-		userid, err := GetISevurityServiceInstance().VerifyToken(&c.Controller)
+		userid, err = GetISevurityServiceInstance().VerifyToken(&c.Controller)
 		if err != nil {
 			utils.CreateErrorResponse(err.Error(), &c.Controller)
 			return
@@ -134,19 +135,19 @@ func (c *SController) DoSrv() {
 		utils.CreateErrorResponse("没有找到"+sdef.ServiceType+"定义的服务接口处理程序", &c.Controller)
 		return
 	}
-	h := handler(&c.Controller)
+	h := handler(&c.Controller, userid)
 	h.DoSrv(sdef, h)
 }
 
 // init 初始化
 func init() {
-	SHandlerContainer[SrvTypeIds] = func(c *beego.Controller) SHandlerInterface {
-		return &IDSServiceHandler{SHandlerBase{Ctl: c}}
+	SHandlerContainer[SrvTypeIds] = func(c *beego.Controller, caller string) SHandlerInterface {
+		return &IDSServiceHandler{SHandlerBase{Ctl: c, CurrentUserId: caller}}
 	}
-	SHandlerContainer[SrvTypePredef] = func(c *beego.Controller) SHandlerInterface {
-		return &PredefineServiceHandler{IDSServiceHandler: IDSServiceHandler{SHandlerBase{Ctl: c}}}
+	SHandlerContainer[SrvTypePredef] = func(c *beego.Controller, caller string) SHandlerInterface {
+		return &PredefineServiceHandler{IDSServiceHandler: IDSServiceHandler{SHandlerBase{Ctl: c, CurrentUserId: caller}}}
 	}
-	SHandlerContainer[SrvValueKey] = func(c *beego.Controller) SHandlerInterface {
-		return &ValueKeyService{SHandlerBase{Ctl: c}}
+	SHandlerContainer[SrvValueKey] = func(c *beego.Controller, caller string) SHandlerInterface {
+		return &ValueKeyService{SHandlerBase{Ctl: c, CurrentUserId: caller}}
 	}
 }
