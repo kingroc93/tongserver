@@ -261,7 +261,7 @@ func (c *IDSServiceHandler) doInsert(sdef *SDefine, meta map[string]interface{},
 // 在服务定义元数据中配置过滤的目标列，以及与用户信息的对照操作
 // 操作为in或者=，为=时条件为目标字段值等于当前用户id
 // 操作为in时，定义目标字段的值包含在idsname定义的数据源中根据userfield等于当前用户id，该数据源必须实现ICriteriaDataSource和IFilterAdder接口
-func (c *IDSServiceHandler) doUserFilter(sdef *SDefine, meta map[string]interface{}, ids datasource.IDataSource, rBody *SRequestBody) bool {
+func (c *IDSServiceHandler) doUserFilter(sdef *SDefine, meta map[string]interface{}, ids datasource.IDataSource, rBody **SRequestBody) bool {
 	if c.CurrentUserId == "" {
 		logs.Error("doUserFilter：当前调用者用户id为空,当前操作被忽略")
 		return false
@@ -287,20 +287,38 @@ func (c *IDSServiceHandler) doUserFilter(sdef *SDefine, meta map[string]interfac
 	if !ok {
 		return false
 	}
-	dfieldname := umap["filterkey"].(string)
-	doper := umap["opera"].(string)
-	didsname := umap["ids"].(string)
-	userfield := umap["userfield"].(string)
+	dfieldname := ""
+	doper := ""
+	didsname := ""
+	userfield := ""
+	joinfield := ""
+	if umap["filterkey"] != nil {
+		dfieldname = umap["filterkey"].(string)
+	}
+	if umap["opera"] != nil {
+		doper = umap["opera"].(string)
+	}
+	if umap["ids"] != nil {
+		didsname = umap["ids"].(string)
+	}
+	if umap["userfield"] != nil {
+		userfield = umap["userfield"].(string)
+	}
+	if umap["joinfield"] != nil {
+		joinfield = umap["joinfield"].(string)
+	}
 	if doper == datasource.OperIn || doper == datasource.OperEq {
-		rb := rBody
-		if rBody == nil {
-			rb = &SRequestBody{}
-			rb.Criteria = make([]CriteriaInRBody, 0, 1)
+
+		if *rBody == nil {
+			*rBody = &SRequestBody{}
+			t := *rBody
+			t.Criteria = make([]CriteriaInRBody, 0, 1)
 		}
+		t := *rBody
 		switch doper {
 		case datasource.OperEq:
 			{
-				rb.Criteria = append(rb.Criteria, CriteriaInRBody{
+				t.Criteria = append(t.Criteria, CriteriaInRBody{
 					Field:     dfieldname,
 					Operation: datasource.OperEq,
 					Value:     c.CurrentUserId,
@@ -325,20 +343,17 @@ func (c *IDSServiceHandler) doUserFilter(sdef *SDefine, meta map[string]interfac
 					return false
 				}
 				if len(rs.Data) == 0 {
-					rb.Criteria = append(rb.Criteria, CriteriaInRBody{
+					t.Criteria = append(t.Criteria, CriteriaInRBody{
 						Field:     dfieldname,
 						Operation: datasource.OperEq,
 						Value:     "",
 						Relation:  datasource.CompAnd})
 				} else {
-					var sub = ""
+					sub := []string{}
 					for _, user := range rs.Data {
-						if sub != "" {
-							sub += ","
-						}
-						sub += "'" + user[rs.Fields[dfieldname].Index].(string) + "'"
+						sub = append(sub, user[rs.Fields[joinfield].Index].(string))
 					}
-					rb.Criteria = append(rb.Criteria, CriteriaInRBody{
+					t.Criteria = append(t.Criteria, CriteriaInRBody{
 						Field:     dfieldname,
 						Operation: datasource.OperIn,
 						Value:     sub,
@@ -357,16 +372,13 @@ func (c *IDSServiceHandler) doUserFilter(sdef *SDefine, meta map[string]interfac
 func (c *IDSServiceHandler) doAllData(sdef *SDefine, meta map[string]interface{}, ids datasource.IDataSource, rBody *SRequestBody) {
 	var resuleset *datasource.DataResultSet
 	var err error
-	if c.doUserFilter(sdef, meta, ids, rBody) {
-		fids, ok := ids.(datasource.ICriteriaDataSource)
-		if ok {
-			resuleset, err = fids.DoFilter()
-		}
+	if c.doUserFilter(sdef, meta, ids, &rBody) {
+		c.doQuery(sdef, meta, ids, rBody)
+		return
 	} else {
 		resuleset, err = ids.GetAllData()
 	}
 	c.setPageParams(ids)
-
 	if err != nil {
 		c.createErrorResult(err.Error())
 		return

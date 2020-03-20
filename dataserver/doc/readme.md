@@ -133,6 +133,79 @@ type IDataSource interface {
 * 基于服务流程的服务
 * 服务元数据接口 **√**
 * 系统管理服务
+
+## 数据源定义
+
+
+
+## 服务定义
+
+SDefine结构提描述一个服务
+
+```go
+// SDefine 服务定义结构体
+type SDefine struct {
+	// ServiceId 服务ID GUID类型
+	ServiceId string
+	// Context 上下文
+	Context string
+	// BodyType 报文类型
+	BodyType string
+	// ServiceType 服务类型
+	ServiceType string
+	// Meta 服务元数据
+	Meta string
+	// Namespace 命名空间
+	Namespace string
+	// Enabled 是否可用
+	Enabled bool
+	// MsgLog 是否开启消息日志
+	MsgLog bool
+	// Security 是否开启安全认证
+	Security bool
+	// 项目id
+	ProjectId string
+}
+```
+
+* Bodytype报文类型目前全部为body，系统里没有对该字段进行处理
+
+* ServiceType包含以下取值
+
+  ``` go
+  const (
+  	// SrvTypeIds 基于TableDataSource类的服务
+  	SrvTypeIds string = "IDS"
+  	// SrvTypePredef 预定义服务
+  	SrvTypePredef string = "PREDEF"
+  	// SrvValueKey value-key形式的服务
+  	SrvValueKey string = "VK"
+  	// SrvTypeSrvflow 基于服务流程的服务
+  	SrvTypeSrvflow string = "SRVFLOW"
+  )
+  ```
+
+### meta定义
+
+meta定义如何创建服务的实例，每一次请求会创建独立的服务实例提供服务
+
+  ``` json
+  {
+      "ids":"[服务的数据源id]",
+      "userfilter":{
+          "filterkey":"[根据数据的哪个字段进行过滤]",
+          "opera":"[过滤操作，仅支持=和in]",
+          "ids":"[根据哪个数据源的数据进行过滤]",
+          "userfield":"[数据源中表示用户id的字段]",
+          "joinfield":"[数据源中需要和当前数据源进行匹配的字段]"
+      }
+  }
+  ```
+
+* ids是服务的数据源id，这个id必须在系统中注册，参考数据源定义一节
+
+
+
 ## 处理接口
 
 ### 调用服务

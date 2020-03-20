@@ -107,7 +107,8 @@ func (c *JedaController) commonCheckGetSrvList() bool {
 
 // 返回字典数据
 func (c *JedaController) GetMeta() {
-	if (beego.BConfig.RunMode == beego.PROD) && !c.verifyUserAccess("jeda.metaservice") {
+	_, ok := c.verifyUserAccess("jeda.metaservice")
+	if (beego.BConfig.RunMode == beego.PROD) && !ok {
 		return
 	}
 	cnt := c.Ctx.Input.Param(":context")
@@ -314,18 +315,18 @@ func (c *JedaController) convertRset2map(ds *datasource.DataResultSet, index int
 }
 
 // 判断用户是否可以访问服务
-func (c *JedaController) verifyUserAccess(srvid string) bool {
+func (c *JedaController) verifyUserAccess(srvid string) (string, bool) {
 	// 处理访问控制
 	userid, err := service.GetISevurityServiceInstance().VerifyToken(&c.Controller)
 	if err != nil {
 		utils.CreateErrorResponse(err.Error(), &c.Controller)
-		return false
+		return "", false
 	}
 	if !service.GetISevurityServiceInstance().VerifyService(userid, srvid, 0) {
 		utils.CreateErrorResponse("未授权的请求", &c.Controller)
-		return false
+		return "", false
 	}
-	return true
+	return userid, true
 }
 
 // DoSrv
@@ -339,12 +340,14 @@ func (c *JedaController) DoSrv() {
 		utils.CreateErrorResponse("没有找到请求的服务,"+cnt, &c.Controller)
 		return
 	}
+	userid := ""
+	ok := false
 	if sdef.Security {
 		// 处理访问控制
-		if !c.verifyUserAccess(sdef.ServiceId) {
+		if userid, ok = c.verifyUserAccess(sdef.ServiceId); !ok {
 			return
 		}
 	}
-	h := &service.IDSServiceHandler{service.SHandlerBase{Ctl: &c.Controller}}
+	h := &service.IDSServiceHandler{service.SHandlerBase{Ctl: &c.Controller, CurrentUserId: userid}}
 	h.DoSrv(sdef, h)
 }
