@@ -26,9 +26,20 @@ func TestSQLBuilder(t *testing.T) {
 	fmt.Println(ps2)
 
 	//CreateSQLBuileder2(dbType string, tablename string, columns []string, orderby []string, rowslimit int, rowsoffset int) (ISQLBuilder, error)
-	//sqld, _ := CreateSQLBuileder2(DbTypeMySQL, "JEDA_USER", []string{"USER_ID", "USER_NAME"}, nil, 0, 0)
+	sqld, _ := CreateSQLBuileder2(DbTypeMySQL, "JEDA_USER", []string{"USER_ID", "USER_NAME"}, nil, 0, 0)
 	//sqld.AddJoin(INNER_JOIN, "JEDA_ORG", []string{"ORG_NAME"}).
-	//	AddCriteria("ORG_ID",OperEq,CompAnd,&FieldNameWithTableName{Tablename:"JEDA_ORG",Fielname:"ORG_ID"})
-	//sql3,_:=sqld.CreateSelectSQL()
-	//fmt.Println(sql3)
+
+	sqld.AddJoin(&PieceJoin{
+		Join:      "INNER_JOIN",
+		TableName: "JEDA_ORG",
+		criteria: []*SQLCriteria{
+			&SQLCriteria{
+				PropertyName: "ORG_ID",
+				Operation:    OperEq,
+				Value:        &FieldNameWithTableName{Tablename: "JEDA_ORG", Fielname: "ORG_ID"},
+				Complex:      CompAnd}},
+		OutField: []string{"ORG_NAME"}})
+
+	sql3, _ := sqld.CreateSelectSQL()
+	fmt.Println(sql3)
 }

@@ -54,6 +54,11 @@ type IFilterAdder interface {
 	Orderby(field string, dir string) IFilterAdder
 }
 
+type IQueryableTableSource interface {
+	IFilterAdder
+	IJoinedDataSource
+}
+
 // IAggregativeAdder 可以聚合的接口
 type IAggregativeAdder interface {
 	AddAggre(outfield string, aggreType *AggreType)

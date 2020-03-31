@@ -158,8 +158,10 @@ func (c *SHandlerBase) doGetMeta(sdef *SDefine, meta map[string]interface{}, ids
 	sd["Meta"] = meta
 
 	imp := []string{"IDataSource"}
-	if _, ok := ids.(datasource.ICriteriaDataSource); ok {
+	if inf, ok := ids.(datasource.ICriteriaDataSource); ok {
 		imp = append(imp, "ICriteriaDataSource")
+		sd["Fields"] = inf.GetFields()
+		sd["KeyFields"] = inf.GetKeyFields()
 	}
 	if _, ok := ids.(datasource.IFilterAdder); ok {
 		imp = append(imp, "IFilterAdder")

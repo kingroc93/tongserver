@@ -572,7 +572,7 @@ func (c *IDSServiceHandler) getMetaData(metaid string) (*datasource.DataResultSe
 	if err != nil {
 		return nil, err
 	}
-	v, ok := obj.(*datasource.TableDataSource)
+	v, ok := obj.(datasource.IQueryableTableSource)
 	if !ok {
 		return nil, fmt.Errorf("获取默认数据源default.mgr.G_META_ITEM出错")
 	}
@@ -591,7 +591,7 @@ func (c *IDSServiceHandler) getMetaID(project string, namespace string, metaname
 	if err != nil {
 		return "", err
 	}
-	v, ok := obj.(*datasource.TableDataSource)
+	v, ok := obj.(datasource.IQueryableTableSource)
 	if !ok {
 		return "", fmt.Errorf("获取默认数据源default.mgr.G_META出错")
 	}
