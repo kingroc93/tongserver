@@ -1,0 +1,4 @@
+FROM scratch
+COPY out/conf /app/conf
+COPY out/tongds_linux /app
+WORKDIR /app
