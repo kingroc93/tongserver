@@ -19,8 +19,12 @@ const (
 	SrvTypeSrvflow string = "SRVFLOW"
 )
 
+const (
+	RSP_DATA_STYLE_JSON int = 1
+)
+
 // createServiceHandlerInterfaceFun 创建服务处理句柄的函数类型
-type createServiceHandlerInterfaceFun func(*beego.Controller, string) SHandlerInterface
+type createServiceHandlerInterfaceFun func(*SController, string) SHandlerInterface
 
 // SHandlerContainer 服务处理句柄容器
 var SHandlerContainer = make(map[string]createServiceHandlerInterfaceFun)
@@ -52,13 +56,38 @@ type SDefine struct {
 // SDefineContainerType 服务定义类型
 type SDefineContainerType map[string]*SDefine
 
+type ServiceControllerBase struct {
+	beego.Controller
+}
+
 // SController 服务控制器基类
 type SController struct {
-	beego.Controller
+	ServiceControllerBase
 }
 
 // SDefineContainer 服务定义容器
 var SDefineContainer = make(SDefineContainerType)
+
+func (c *ServiceControllerBase) CreateResponseData(style int, data interface{}) {
+	if style == RSP_DATA_STYLE_JSON {
+		c.Data["json"] = data
+	}
+}
+func (c *ServiceControllerBase) GetParame(name string) string {
+	if strings.HasPrefix(name, ":") {
+
+		return c.Ctx.Input.Param(name)
+	} else {
+		return c.Input().Get(name)
+	}
+}
+func (c *ServiceControllerBase) GetRequestBody() []byte {
+	if c.Ctx.Request.Method == "POST" {
+		return c.Ctx.Input.RequestBody
+	} else {
+		return nil
+	}
+}
 
 // reloadSrvMetaFromDatabase 从数据库中加载服务定义信息
 func (c *SController) reloadSrvMetaFromDatabase(cnt string) (*SDefine, error) {
@@ -103,7 +132,6 @@ func (c *SController) reloadSrvMetaFromDatabase(cnt string) (*SDefine, error) {
 
 // DoSrv 处理请求
 func (c *SController) DoSrv() {
-
 	//获取上下文
 	cnt := c.Ctx.Input.Param(":context")
 	//根据上下文获取服务定义信息
@@ -135,19 +163,20 @@ func (c *SController) DoSrv() {
 		utils.CreateErrorResponse("没有找到"+sdef.ServiceType+"定义的服务接口处理程序", &c.Controller)
 		return
 	}
-	h := handler(&c.Controller, userid)
+	h := handler(c, userid)
 	h.DoSrv(sdef, h)
+	c.ServeJSON()
 }
 
 // init 初始化
 func init() {
-	SHandlerContainer[SrvTypeIds] = func(c *beego.Controller, caller string) SHandlerInterface {
-		return &IDSServiceHandler{SHandlerBase{Ctl: c, CurrentUserId: caller}}
+	SHandlerContainer[SrvTypeIds] = func(c *SController, caller string) SHandlerInterface {
+		return &IDSServiceHandler{SHandlerBase{RRHandler: c, CurrentUserId: caller}}
 	}
-	SHandlerContainer[SrvTypePredef] = func(c *beego.Controller, caller string) SHandlerInterface {
-		return &PredefineServiceHandler{IDSServiceHandler: IDSServiceHandler{SHandlerBase{Ctl: c, CurrentUserId: caller}}}
+	SHandlerContainer[SrvTypePredef] = func(c *SController, caller string) SHandlerInterface {
+		return &PredefineServiceHandler{IDSServiceHandler: IDSServiceHandler{SHandlerBase{RRHandler: c, CurrentUserId: caller}}}
 	}
-	SHandlerContainer[SrvValueKey] = func(c *beego.Controller, caller string) SHandlerInterface {
-		return &ValueKeyService{SHandlerBase{Ctl: c, CurrentUserId: caller}}
+	SHandlerContainer[SrvValueKey] = func(c *SController, caller string) SHandlerInterface {
+		return &ValueKeyService{SHandlerBase{RRHandler: c, CurrentUserId: caller}}
 	}
 }

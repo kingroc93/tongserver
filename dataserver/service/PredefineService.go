@@ -54,24 +54,25 @@ func (c *PredefineServiceHandler) merageRbody(rBody *SRequestBody) *SRequestBody
 
 // getRBody 返回请求体
 func (c *PredefineServiceHandler) getRBody() *SRequestBody {
-	if c.Ctl.Ctx.Request.Method == "POST" {
+	bodystr := c.RRHandler.GetRequestBody()
+	if bodystr != nil {
 		rBody := &SRequestBody{}
-		if len(c.Ctl.Ctx.Input.RequestBody) != 0 {
-			err := json.Unmarshal([]byte(c.Ctl.Ctx.Input.RequestBody), rBody)
+		if len(bodystr) != 0 {
+			err := json.Unmarshal([]byte(bodystr), rBody)
 			if err != nil {
 				c.createErrorResponse("解析报文时发生错误" + err.Error())
 			}
 		}
 		for i, cri := range c.predefine.SRequestBody.Criteria {
 			if cri.Value == ":?" {
-				c.predefine.SRequestBody.Criteria[i].Value = c.Ctl.Input().Get(cri.Field)
+				c.predefine.SRequestBody.Criteria[i].Value = c.RRHandler.GetParame(cri.Field)
 			}
 		}
 		return c.merageRbody(rBody)
 	}
 	for i, cri := range c.predefine.SRequestBody.Criteria {
 		if cri.Value == ":?" {
-			c.predefine.SRequestBody.Criteria[i].Value = c.Ctl.Input().Get(cri.Field)
+			c.predefine.SRequestBody.Criteria[i].Value = c.RRHandler.GetParame(cri.Field)
 		}
 	}
 	return &c.predefine.SRequestBody
@@ -109,8 +110,7 @@ func (c *PredefineServiceHandler) doGetMeta(sdef *SDefine, meta map[string]inter
 	sd["MsgLog"] = sdef.MsgLog
 	sd["Security"] = sdef.Security
 	sd["Meta"] = meta
-	c.Ctl.Data["json"] = r
-	c.ServeJSON()
+	c.RRHandler.CreateResponseData(RSP_DATA_STYLE_JSON, r)
 }
 
 // getActionMap 返回动作映射表

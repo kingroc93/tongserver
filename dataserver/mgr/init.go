@@ -83,7 +83,6 @@ func createDefaultService() {
 func init() {
 	createDefaultService()
 	beego.Router("/mgr/?:context/?:action", &JedaController{}, "get,post:DoSrv")
-	beego.Router("/meta/?:context", &JedaController{}, "get,post:GetMeta")
 	beego.Router("/jeda/user/?:cat", &JedaController{}, "get,post:GetCurrentUserInfo")
 	//JWT Request
 	beego.Router("/token/verify", &SecurityController{}, "post:VerifyToken")

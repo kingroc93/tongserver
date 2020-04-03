@@ -3,7 +3,6 @@ package service
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/astaxie/beego"
 	"github.com/satori/go.uuid"
 	"strconv"
 	"strings"
@@ -11,6 +10,44 @@ import (
 	"tongserver.dataserver/datasource"
 
 	"tongserver.dataserver/utils"
+)
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+const (
+	//返回全部数据
+	SrvActionALLDATA string = "all"
+	//查询动作
+	SrvActionQUERY string = "query"
+	//根据主键返回
+	SrvActionGET string = "get"
+	//返回缓存
+	SrvActionCACHE string = "cache"
+	//根据字段值返回
+	SrvActionBYFIELD string = "byfield"
+	//返回服务元数据
+	SrvActionMETA string = "meta"
+	//删除操作
+	SrvActionDELETE string = "delete"
+	//更新操作
+	SrvActionUPDATE string = "update"
+	//插入操作
+	SrvActionINSERT string = "insert"
+
+	//以下三个常量均为通过QueryString传入的参数名
+	//针对查询自动分页中每页记录数
+	RequestParamPagesize string = "_pagesize"
+	//针对查询自动分页中的页索引
+	RequestParamPageindex string = "_pageindex"
+	//是否返回字段元数据，默认为返回
+	RequestParamNofieldsinfo string = "_nofield"
+	// 响应的风格，默认是数组风格array，可以设定为map风格
+	ResponseStyle string = "_repstyle"
+	//当前请求不执行而是只返回SQL语句，仅针对IDS类型的服务有效
+	RequestParamSQL string = "_sql"
+	//当前请求的响应信息不直接返回
+	//该参数只对query、all两个操作起作用
+	RequestParamCache      string = "_cache"
+	RequestParamCachebykey string = "_cachekey"
 )
 
 // SHandlerInterface 服务处理接口
@@ -25,14 +62,28 @@ type SHandlerInterface interface {
 	getServiceInterface(meta map[string]interface{}, sdef *SDefine) (interface{}, error)
 }
 
+// 请求响应的接口
+type RequestResponseHandler interface {
+	CreateResponseData(style int, data interface{})
+	GetParame(name string) string
+	GetRequestBody() []byte
+}
+
 // SerivceActionHandler 处理请求的方法类型
 type SerivceActionHandler func(sdef *SDefine, meta map[string]interface{}, ids datasource.IDataSource, rBody *SRequestBody)
 
 // SHandlerBase 服务处理句柄基类
 type SHandlerBase struct {
-	Ctl           *beego.Controller
+	//Ctl           *beego.Controller
+	RRHandler     RequestResponseHandler
 	ActionMap     map[string]SerivceActionHandler
 	CurrentUserId string
+}
+
+func (c *SHandlerBase) createErrorResponse(msg string) {
+	r := utils.CreateRestResult(false)
+	r["msg"] = msg
+	c.RRHandler.CreateResponseData(RSP_DATA_STYLE_JSON, r)
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -58,7 +109,7 @@ func (c *SHandlerBase) DoSrv(sdef *SDefine, inf SHandlerInterface) {
 	}
 	obj, err := inf.getServiceInterface(meta, sdef)
 	if err != nil {
-		c.createErrorResponseByError(err)
+		c.createErrorResponse(err.Error())
 		return
 	}
 	rBody := inf.getRBody()
@@ -68,7 +119,7 @@ func (c *SHandlerBase) DoSrv(sdef *SDefine, inf SHandlerInterface) {
 		c.createErrorResponse("请求的服务没有实现IDataSource接口")
 		return
 	}
-	act := c.Ctl.Ctx.Input.Param(":action")
+	act := c.RRHandler.GetParame(":action") //c.Ctl.Ctx.Input.Param(":action")
 	amap := inf.getActionMap()
 	f, ok := amap[act]
 	if !ok {
@@ -85,13 +136,8 @@ func (c *SHandlerBase) getActionMap() map[string]SerivceActionHandler {
 	}
 }
 
-// createErrorResponse 设定失败结果
-func (c *SHandlerBase) createErrorResponse(msg string) {
-	utils.CreateErrorResponse(msg, c.Ctl)
-}
-
 func (c *SHandlerBase) getCache(sdef *SDefine, ids datasource.IDataSource, rBody *SRequestBody) (*utils.RestResult, error) {
-	key := c.Ctl.Input().Get(RequestParamCachebykey)
+	key := c.RRHandler.GetParame(RequestParamCachebykey) //c.Ctl.Input().Get(RequestParamCachebykey)
 	if key == "" {
 		return nil, fmt.Errorf(RequestParamCachebykey + "不得为空")
 	}
@@ -121,7 +167,6 @@ func (c *SHandlerBase) getCache(sdef *SDefine, ids datasource.IDataSource, rBody
 		if err != nil {
 			r["result"] = false
 			r["msg"] = "加入缓存时发生错误：" + err.Error()
-			c.Ctl.Data["json"] = r
 			return &r, fmt.Errorf("加入缓存时发生错误：" + err.Error())
 		}
 	}
@@ -138,8 +183,8 @@ func (c *SHandlerBase) doGetCache(sdef *SDefine, meta map[string]interface{}, id
 	if err != nil {
 		(*r)["msg"] = err.Error()
 	}
-	c.Ctl.Data["json"] = r
-	c.ServeJSON()
+	c.RRHandler.CreateResponseData(RSP_DATA_STYLE_JSON, r)
+
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -174,60 +219,37 @@ func (c *SHandlerBase) doGetMeta(sdef *SDefine, meta map[string]interface{}, ids
 	}
 	r["ids"] = imp
 
-	c.Ctl.Data["json"] = r
-	c.ServeJSON()
-}
-
-// createErrorResponseByError 根据error设定失败结果
-func (c *SHandlerBase) createErrorResponseByError(err error) {
-	utils.CreateErrorResponseByError(err, c.Ctl)
-}
-
-// createErrorResult 设定失败结果
-func (c *SHandlerBase) createErrorResult(msg string) {
-	utils.CreateErrorResponse(msg, c.Ctl)
-}
-
-// setResult 设定请求成功的返回结果
-func (c *SHandlerBase) setResult(msg string) {
-	r := utils.CreateRestResult(true)
-	r["msg"] = msg
-	c.Ctl.Data["json"] = r
+	//c.Ctl.Data["json"] = r
+	//c.ServeJSON()
+	c.RRHandler.CreateResponseData(RSP_DATA_STYLE_JSON, r)
 }
 
 // setResultSet 设定结果集
 func (c *SHandlerBase) setResultSet(ds *datasource.DataResultSet) {
-	if c.Ctl.Input().Get(RequestParamCache /**_cache**/) != "" {
+	//c.Ctl.Input().Get(RequestParamCache /**_cache**/)
+	if c.RRHandler.GetParame(RequestParamCache /**_cache**/) != "" {
 		// 处理缓存请求 [缓存时间]_[最大请求次数]  10_1  缓存的结果集请求一次即删除，
 		// 最长保存10秒钟，“缓存时间”为0时表示使用系统定义的默认缓存时间，为30s
 		// 缓存的结果集随时都有可能消失
-		cs := c.Ctl.Input().Get(RequestParamCache)
+		cs := c.RRHandler.GetParame(RequestParamCache) //c.Ctl.Input().Get(RequestParamCache)
 		css := strings.Split(cs, "_")
 		r := utils.CreateRestResult(true)
 		if len(css) != 2 {
-			r["result"] = false
-			r["msg"] = "缓存参数" + RequestParamCache + "必须为 [缓存时间]_[最大请求次数] 的形式"
-			c.Ctl.Data["json"] = r
+			c.createErrorResponse("缓存参数" + RequestParamCache + "必须为 [缓存时间]_[最大请求次数] 的形式")
 			return
 		}
 		t, ok := strconv.Atoi(css[0])
 		if ok != nil {
-			r["result"] = false
-			r["msg"] = "缓存时间非法"
-			c.Ctl.Data["json"] = r
+			c.createErrorResponse("缓存时间非法")
 			return
 		}
 		t2, ok := strconv.Atoi(css[1])
 		if ok != nil {
-			r["result"] = false
-			r["msg"] = "最大请求次数非法"
-			c.Ctl.Data["json"] = r
+			c.createErrorResponse("最大请求次数非法")
 			return
 		}
 		if t < 0 || t2 < 0 {
-			r["result"] = false
-			r["msg"] = "非法的最大请求次数或缓存时间"
-			c.Ctl.Data["json"] = r
+			c.createErrorResponse("非法的最大请求次数或缓存时间")
 			return
 		}
 
@@ -243,17 +265,17 @@ func (c *SHandlerBase) setResultSet(ds *datasource.DataResultSet) {
 		r["duration"] = t
 		err := utils.DataSetResultCache.Put(keys, r, time.Duration(t)*time.Second)
 		if err != nil {
-			r["result"] = false
-			r["msg"] = "加入缓存时发生错误：" + err.Error()
-			c.Ctl.Data["json"] = r
+			c.createErrorResponse("加入缓存时发生错误：" + err.Error())
 			return
 		}
-		c.Ctl.Data["json"] = r
+		c.RRHandler.CreateResponseData(RSP_DATA_STYLE_JSON, r)
 		return
 	}
 	r := utils.CreateRestResult(true)
-	if c.Ctl.Input().Get(ResponseStyle) != "map" {
-		if c.Ctl.Input().Get(RequestParamNofieldsinfo) != "" {
+	//if c.Ctl.Input().Get(ResponseStyle) != "map" {
+	if c.RRHandler.GetParame(ResponseStyle) != "map" {
+		//if c.Ctl.Input().Get(RequestParamNofieldsinfo) != "" {
+		if c.RRHandler.GetParame(RequestParamNofieldsinfo) != "" {
 			r["data"] = ds.Data
 		} else {
 			r["resultset"] = ds
@@ -267,7 +289,8 @@ func (c *SHandlerBase) setResultSet(ds *datasource.DataResultSet) {
 			}
 			result[i] = item
 		}
-		if c.Ctl.Input().Get(RequestParamNofieldsinfo) != "" {
+		//if c.Ctl.Input().Get(RequestParamNofieldsinfo) != "" {
+		if c.RRHandler.GetParame(RequestParamNofieldsinfo) != "" {
 			r["data"] = result
 		} else {
 			rsd := make(map[string]interface{})
@@ -277,18 +300,13 @@ func (c *SHandlerBase) setResultSet(ds *datasource.DataResultSet) {
 			r["resultset"] = rsd
 		}
 	}
-	c.Ctl.Data["json"] = r
-}
-
-// ServeJSON call the c.Ctl.ServeJSON()
-func (c *SHandlerBase) ServeJSON() {
-	c.Ctl.ServeJSON()
+	c.RRHandler.CreateResponseData(RSP_DATA_STYLE_JSON, r)
 }
 
 // setPageParams 设定从querystring传入的公共参数
 func (c *SHandlerBase) setPageParams(ids datasource.IDataSource) {
-	psi, err := strconv.Atoi(c.Ctl.Input().Get(RequestParamPagesize))
-	pii, err2 := strconv.Atoi(c.Ctl.Input().Get(RequestParamPageindex))
+	psi, err := strconv.Atoi(c.RRHandler.GetParame(RequestParamPagesize))
+	pii, err2 := strconv.Atoi(c.RRHandler.GetParame(RequestParamPageindex))
 	if err == nil {
 		ids.SetRowsLimit(psi)
 		if err2 == nil {

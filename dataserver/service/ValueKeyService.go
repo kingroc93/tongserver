@@ -27,19 +27,18 @@ func (c *ValueKeyService) doGetValueByKey(sdef *SDefine, meta map[string]interfa
 	params := make([]interface{}, len(fs), len(fs))
 	for i, f := range fs {
 		var err error
-		params[i], err = c.ConvertString2Type(c.Ctl.Input().Get(f.Name), f.DataType)
+		params[i], err = c.ConvertString2Type(c.RRHandler.GetParame(f.Name), f.DataType)
 		if err != nil {
-			c.createErrorResponse("类型转换错误" + c.Ctl.Input().Get(f.Name) + " " + f.DataType + " err:" + err.Error())
+			c.createErrorResponse("类型转换错误" + c.RRHandler.GetParame(f.Name) + " " + f.DataType + " err:" + err.Error())
 			return
 		}
 	}
 	resuleset, err := ids.QueryDataByKey(params...)
 	if err != nil {
-		c.createErrorResult(err.Error())
+		c.createErrorResponse(err.Error())
 	} else {
 		c.setResultSet(resuleset)
 	}
-	c.ServeJSON()
 }
 
 func (c *ValueKeyService) getServiceInterface(meta map[string]interface{}, sdef *SDefine) (interface{}, error) {

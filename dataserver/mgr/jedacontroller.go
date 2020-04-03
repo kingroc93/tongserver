@@ -5,7 +5,6 @@ import (
 	"github.com/astaxie/beego/logs"
 	"github.com/skip2/go-qrcode"
 	"strconv"
-	"strings"
 	"tongserver.dataserver/datasource"
 	"tongserver.dataserver/service"
 	"tongserver.dataserver/utils"
@@ -13,7 +12,7 @@ import (
 
 // JedaController 后台管理控制器
 type JedaController struct {
-	beego.Controller
+	service.ServiceControllerBase
 	ControllerWithVerify
 }
 
@@ -103,33 +102,6 @@ func (c *JedaController) commonCheckGetSrvList() bool {
 		return true
 	}
 	return false
-}
-
-// 返回字典数据
-func (c *JedaController) GetMeta() {
-	_, ok := c.verifyUserAccess("jeda.metaservice")
-	if (beego.BConfig.RunMode == beego.PROD) && !ok {
-		return
-	}
-	cnt := c.Ctx.Input.Param(":context")
-	ps := strings.Split(cnt, ".")
-	if len(ps) != 3 {
-		utils.CreateErrorResponse("传入参数格式不正确，PROJECTID.NAMESPACE.METANAME", &c.Controller)
-		return
-	}
-	pid := ps[0]
-	metaname := ps[len(ps)-1]
-	ns := cnt[len(pid)+1 : len(cnt)-len(metaname)-1]
-	sqld := datasource.CreateSQLDataSource("METASEL", "default",
-		"SELECT a.* FROM idb.G_META_ITEM a inner join idb.G_META b on a.META_ID=b.ID and b.projectid=? and b.namespace=? and b.metaname=?")
-	sqld.ParamsValues = []interface{}{pid, ns, metaname}
-	rs, err := sqld.GetAllData()
-	if err != nil {
-		utils.CreateErrorResponse("发生错误"+err.Error(), &c.Controller)
-		return
-	}
-	c.Data["json"] = rs
-	c.ServeJSON()
 }
 
 // 测试链接
@@ -348,6 +320,7 @@ func (c *JedaController) DoSrv() {
 			return
 		}
 	}
-	h := &service.IDSServiceHandler{service.SHandlerBase{Ctl: &c.Controller, CurrentUserId: userid}}
+	h := &service.IDSServiceHandler{service.SHandlerBase{RRHandler: c, CurrentUserId: userid}}
 	h.DoSrv(sdef, h)
+	c.ServeJSON()
 }
