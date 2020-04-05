@@ -301,7 +301,7 @@ meta定义如何创建服务的实例，每一次请求会创建独立的服务�
                 		}
                 },
                      {
-                       "name": "ColumnFilterFunc",   #字段过滤器
+                       "name": "ColumnFilterFunc",   #字段过滤器,字段过滤器必须为最后一个处理函数
                        "params": {
                          "show": ["USER_ID", "USER_NAME", "ORG_ID", "USER_CREATED","ORG_NAME"]
                        }
@@ -563,6 +563,7 @@ meta定义如何创建服务的实例，每一次请求会创建独立的服务�
 * 默认响应是数据组形式，通过在URL中添加_repstyle=map参数设定响应形式为map方式
 
 * 通过服务定义可以为该服务添加用户过滤器，只返回和某一用户相关的数据
+服务定义JSON：
 ```go
     JedaSrvContainer["jeda.meta"] = createService("jeda.meta", map[string]interface{}{
 		"ids": "default.mgr.G_META",
@@ -573,4 +574,34 @@ meta定义如何创建服务的实例，每一次请求会创建独立的服务�
 			"userfield": "USERID",
 			"joinfield": "PROJECTNAME"},
 	})
+```
+
+
+* 递归用户过滤器
+服务定义JSON：
+```json
+{
+		"ids": "default.mgr.G_META",
+		"userfilter": {
+			"filterkey": "PROJECTID",
+			"opera": "in",
+			"values":{
+				"outfield": "PROJECTNAME"
+				"ids": "default.mgr.G_USERPROJECT",
+				"userfilter": {
+		 			"filterkey": "PROJECTID",
+					"opera": "in",
+					"userfield": "USERID",
+				}  				
+			}
+		}
+}
+```
+
+* 服务定义中添加JOIN子句
+```json
+{
+		"ids": "default.mgr.G_META",
+		"join": {}
+}
 ```

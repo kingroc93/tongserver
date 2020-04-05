@@ -20,33 +20,10 @@ var DBAlias2DBTypeContainer = make(map[string]string)
 var IDSContainer IDSContainerType
 
 // iDSCreator 数据源的创建函数集合，根据名字选择合适的创建函数，创建数据源
-var iDSCreator = map[string]func(p IDSContainerParam) interface{}{
-	"CreateTableDataSource": func(p IDSContainerParam) interface{} {
-		return CreateTableDataSource(p["name"].(string), p["dbalias"].(string), p["tablename"].(string))
-	},
-	"CreateWriteableTableDataSource": func(p IDSContainerParam) interface{} {
-		return CreateWriteableTableDataSource(p["name"].(string), p["dbalias"].(string), p["tablename"].(string))
-	},
-	"CreateKeyStringFromTableSource": func(p IDSContainerParam) interface{} {
-		if p["cached"] == "true" {
-			obj := utils.DictDataCache.Get(p["name"].(string))
-			if obj != nil {
-				return obj.(*KeyStringSource)
-			}
-		}
-		ks := &KeyStringSource{
-			DataSource: DataSource{
-				Name: p["name"].(string),
-			},
-		}
-		ks.Init()
-		ts := CreateTableDataSource(p["name"].(string)+"_", p["dbalias"].(string), p["tablename"].(string))
-		ks.FillDataByDataSource(ts, p["keyfield"].(string), p["valuefield"].(string))
-		if p["cached"] == "true" {
-			utils.DictDataCache.Put(p["name"].(string), ks, 5*time.Minute)
-		}
-		return ks
-	},
+var iDSCreator = make(map[string]func(p IDSContainerParam) interface{})
+
+func AddIdsCreator(name string, f func(p IDSContainerParam) interface{}) {
+	iDSCreator[name] = f
 }
 
 // CreateIDSFromParam 根据配置参数创建数据源接口,这个配置参数是保存在数据库里面的

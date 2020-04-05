@@ -219,6 +219,22 @@ func (c *IDSServiceHandler) doInsert(sdef *SDefine, meta map[string]interface{},
 // 在服务定义元数据中配置过滤的目标列，以及与用户信息的对照操作
 // 操作为in或者=，为=时条件为目标字段值等于当前用户id
 // 操作为in时，定义目标字段的值包含在idsname定义的数据源中根据userfield等于当前用户id，该数据源必须实现ICriteriaDataSource和IFilterAdder接口
+// {
+// 		"ids": "default.mgr.G_META",
+// 		"userfilter": {
+// 			"filterkey": "PROJECTID",
+// 			"opera": "in",
+// 			"values":{
+// 				"outfield": "PROJECTNAME"
+// 				"ids": "default.mgr.G_USERPROJECT",
+//				"userfilter": {
+//		 			"filterkey": "PROJECTID",
+// 					"opera": "in",
+//					"userfield": "USERID",
+//				}
+// 			}
+// 		}
+// }
 func (c *IDSServiceHandler) doUserFilter(sdef *SDefine, meta map[string]interface{}, ids datasource.IDataSource, rBody **SRequestBody) (bool, error) {
 	us, ok := meta["userfilter"]
 	if !ok {
@@ -245,7 +261,7 @@ func (c *IDSServiceHandler) doUserFilter(sdef *SDefine, meta map[string]interfac
 	doper := ""
 	didsname := ""
 	userfield := ""
-	joinfield := ""
+	outfield := ""
 	if umap["filterkey"] != nil {
 		dfieldname = umap["filterkey"].(string)
 	}
@@ -258,8 +274,8 @@ func (c *IDSServiceHandler) doUserFilter(sdef *SDefine, meta map[string]interfac
 	if umap["userfield"] != nil {
 		userfield = umap["userfield"].(string)
 	}
-	if umap["joinfield"] != nil {
-		joinfield = umap["joinfield"].(string)
+	if umap["outfield"] != nil {
+		outfield = umap["outfield"].(string)
 	}
 	if doper == datasource.OperIn || doper == datasource.OperEq {
 
@@ -305,7 +321,7 @@ func (c *IDSServiceHandler) doUserFilter(sdef *SDefine, meta map[string]interfac
 				} else {
 					sub := []string{}
 					for _, user := range rs.Data {
-						sub = append(sub, user[rs.Fields[joinfield].Index].(string))
+						sub = append(sub, user[rs.Fields[outfield].Index].(string))
 					}
 					t.Criteria = append(t.Criteria, CriteriaInRBody{
 						Field:     dfieldname,

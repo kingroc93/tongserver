@@ -1,7 +1,6 @@
 package service
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/context"
@@ -174,11 +173,13 @@ func (c *TokenService) VerifyTokenCtx(ctx *context.Context) (string, error) {
 	if utils.GetHmacCode(js, HASHSECRET) != ss[1] {
 		return "", fmt.Errorf("invalid Authorization in request header")
 	}
-	m := make(map[string]interface{})
-	err := json.Unmarshal([]byte(js), &m)
+	// m := make(map[string]interface{})
+	// err := json.Unmarshal([]byte(js), &m)
+	meta, err := utils.ParseJSONStr2Map(js)
 	if err != nil {
 		return "", fmt.Errorf("invalid Authorization in request header")
 	}
+	m := *meta
 	n := time.Now().UnixNano()
 	if n-int64(m["time"].(float64)) > TokenExpire*1e9 {
 		return "", fmt.Errorf("invalid Authorization in request header")

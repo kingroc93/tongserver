@@ -300,27 +300,3 @@ func (c *JedaController) verifyUserAccess(srvid string) (string, bool) {
 	}
 	return userid, true
 }
-
-// DoSrv
-func (c *JedaController) DoSrv() {
-	//获取上下文
-	cnt := c.Ctx.Input.Param(":context")
-	//根据上下文获取服务定义信息
-	//默认是从数据库获取
-	sdef := JedaSrvContainer[cnt]
-	if sdef == nil {
-		utils.CreateErrorResponse("没有找到请求的服务,"+cnt, &c.Controller)
-		return
-	}
-	userid := ""
-	ok := false
-	if sdef.Security {
-		// 处理访问控制
-		if userid, ok = c.verifyUserAccess(sdef.ServiceId); !ok {
-			return
-		}
-	}
-	h := &service.IDSServiceHandler{service.SHandlerBase{RRHandler: c, CurrentUserId: userid}}
-	h.DoSrv(sdef, h)
-	c.ServeJSON()
-}
