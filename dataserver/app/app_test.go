@@ -18,21 +18,18 @@ import (
 var SRV_URL = "http://127.0.0.1:8081"
 var TOKEN = ""
 
-//type RequestResponseHandler interface {
-//	CreateResponseData(style int, data interface{})
-//	GetParam(name string) string
-//	GetRequestBody() []byte
-//}
-
+// 用于测试的RequestResponse类
 type innerRRHandler struct {
 	body []byte
 	p    *map[string]string
 }
 
+// CreateInnerRR
 func CreateInnerRR(bo []byte, pa *map[string]string) service.RequestResponseHandler {
 	return &innerRRHandler{bo, pa}
 }
 
+// CreateResponseData
 func (c *innerRRHandler) CreateResponseData(style int, data interface{}) {
 	if style == service.RSP_DATA_STYLE_JSON {
 		b, err := json.Marshal(data)
@@ -45,14 +42,17 @@ func (c *innerRRHandler) CreateResponseData(style int, data interface{}) {
 	}
 }
 
+// GetParam
 func (c *innerRRHandler) GetParam(name string) string {
 	return (*c.p)[name]
 }
 
+// GetRequestBody
 func (c *innerRRHandler) GetRequestBody() []byte {
 	return c.body
 }
 
+// 测试前初始化环境
 func TestMain(m *testing.M) {
 	err := orm.RegisterDataBase("default", "mysql", "tong:123456@tcp(127.0.0.1:3306)/idb", 30)
 	datasource.DBAlias2DBTypeContainer["default"] = "mysql"
@@ -64,6 +64,8 @@ func TestMain(m *testing.M) {
 	code := m.Run()
 	os.Exit(code)
 }
+
+// 发送post请求
 func postData(path string, jsondata string, header *map[string]string) *map[string]interface{} {
 	url := SRV_URL + path //
 	client := &http.Client{}
@@ -94,6 +96,7 @@ func postData(path string, jsondata string, header *map[string]string) *map[stri
 	return rm
 }
 
+// 调用远程服务创建用户令牌，运行前先启动app.main
 func TestCreateUserToken(t *testing.T) {
 	jsonData := `{
 	"LoginName":"lvxing",
@@ -108,6 +111,7 @@ func TestCreateUserToken(t *testing.T) {
 	fmt.Println("TOKEN IS:" + TOKEN)
 }
 
+// 调用远程meta服务获取元数据，运行前先启动app.main
 func TestJeda_meta(t *testing.T) {
 	TestCreateUserToken(t)
 	if t.Failed() {
@@ -138,10 +142,12 @@ func createService(cnt string, meta map[string]interface{}) *service.SDefine {
 	return srv
 }
 
-func serviceCall(sdef *service.SDefine) {
+// 调用内部服务，该服务可以通过RequestResponse类实现发布
+// 调用服务的all方法
+func serviceCall(srvtype string, sdef *service.SDefine) {
 	ReadCfg()
 	CreateIDSCreator()
-	f := service.SHandlerContainer[service.SrvTypeIds]
+	f := service.SHandlerContainer[srvtype]
 	rrh := CreateInnerRR([]byte("{}"), &map[string]string{
 		":action":   "all",
 		"_repstyle": "map"})
@@ -149,6 +155,7 @@ func serviceCall(sdef *service.SDefine) {
 	h.DoSrv(sdef, h)
 }
 
+// 测试用户过滤器，使用两级递归的过滤器实现
 func Test_G_METAITME(t *testing.T) {
 	sdef := createService("jeda.meta", map[string]interface{}{
 		"ids": "default.mgr.G_META_ITEM",
@@ -165,9 +172,19 @@ func Test_G_METAITME(t *testing.T) {
 					"values":    "userid",
 				}}},
 	})
-	serviceCall(sdef)
+	serviceCall(service.SrvTypeIds, sdef)
+	b, err := json.Marshal(sdef)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Println("===== service define json =====")
+	var str bytes.Buffer
+	json.Indent(&str, b, "", "    ")
+	fmt.Println(str.String())
 }
 
+// 测试用户过滤器,测试一级用户过滤器
 func Test_G_META(t *testing.T) {
 	sdef := createService("jeda.meta", map[string]interface{}{
 		"ids": "default.mgr.G_META",
@@ -178,5 +195,5 @@ func Test_G_META(t *testing.T) {
 				"filterkey": "USERID",
 				"outfield":  "PROJECTNAME",
 				"values":    "userid"}}})
-	serviceCall(sdef)
+	serviceCall(service.SrvTypeIds, sdef)
 }

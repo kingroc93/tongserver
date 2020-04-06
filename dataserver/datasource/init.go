@@ -56,7 +56,7 @@ type IFilterAdder interface {
 
 type IQueryableTableSource interface {
 	IFilterAdder
-	IJoinedDataSource
+	ICriteriaDataSource
 }
 
 // IAggregativeAdder 可以聚合的接口
