@@ -214,6 +214,69 @@ func (c *IDSServiceHandler) doInsert(sdef *SDefine, meta map[string]interface{},
 	}
 }
 
+// 			"values":{
+// 				"outfield": "PROJECTNAME"
+// 				"ids": "default.mgr.G_USERPROJECT",
+//				"filterkey": "PROJECTID",
+//				"values":"userid"
+// 			}
+func (c *IDSServiceHandler) getUserFilterValues(values interface{}) []string {
+	if values == nil {
+		logs.Error("userfilter节点的values子节点为nil")
+		return nil
+	}
+	switch reflect.TypeOf(values).Kind() {
+	case reflect.String:
+		if strings.ToLower(values.(string)) == "userid" {
+			return []string{c.CurrentUserId}
+		} else {
+			logs.Error("userfilter节点的values子节点如果是string类型，但值不为userid，该值会被忽略")
+			return nil
+		}
+	case reflect.Map:
+		umap := values.(map[string]interface{})
+		outfield := umap["outfield"].(string)
+		ids := umap["ids"].(string)
+		filterkey := umap["filterkey"].(string)
+		values := c.getUserFilterValues(umap["values"])
+		if len(values) == 0 {
+			logs.Error("getUserFilterValues：values 节点定义的数据为空")
+			return nil
+		}
+		obj := datasource.CreateIDSFromParam(datasource.IDSContainer[ids])
+		if obj == nil {
+			logs.Error("doUserFilter：服务元数据中定义的userfilter节点，中引用的id为" + ids + "的数据源不存在")
+			return nil
+		}
+		dids, ok := obj.(datasource.IQueryableTableSource)
+		if !ok {
+			logs.Error("doUserFilter：服务元数据中定义的userfilter节点，中引用的id为" + ids + "的数据源没有实现IDataSource接口")
+			return nil
+		}
+		var rs *datasource.DataResultSet
+		var err error
+		if len(values) == 1 {
+			rs, err = dids.QueryDataByFieldValues(&map[string]interface{}{filterkey: values[0]})
+		} else {
+			dids.AddCriteria(filterkey, datasource.OperIn, values)
+			rs, err = dids.DoFilter()
+		}
+		if err != nil {
+			logs.Error("doUserFilter：服务元数据中定义的userfilter节点，中引用的id为" + ids + "的数据源在查询数据时发生错误：" + err.Error())
+			return nil
+		}
+		os := make([]string, len(rs.Data), len(rs.Data))
+		for index, item := range rs.Data {
+			os[index] = item[rs.Fields[outfield].Index].(string)
+		}
+		return os
+	default:
+		logs.Error("userfilter节点的values子节点必须是string类型或者map类型")
+		return nil
+	}
+	return nil
+}
+
 // 处理用户过滤器，添加用户过滤器的服务，用户查询只返回当前用户的信息
 // 根据当前的用户信息对数据进行筛选，通过直接在rBody添加相应的查询条件实现
 // 在服务定义元数据中配置过滤的目标列，以及与用户信息的对照操作
@@ -223,13 +286,11 @@ func (c *IDSServiceHandler) doInsert(sdef *SDefine, meta map[string]interface{},
 // 		"ids": "default.mgr.G_META",
 // 		"userfilter": {
 // 			"filterkey": "PROJECTID",
-// 			"opera": "in",
 // 			"values":{
 // 				"outfield": "PROJECTNAME"
 // 				"ids": "default.mgr.G_USERPROJECT",
-//				"userfilter": {
+//				"values": {
 //		 			"filterkey": "PROJECTID",
-// 					"opera": "in",
 //					"userfield": "USERID",
 //				}
 // 			}
@@ -258,83 +319,71 @@ func (c *IDSServiceHandler) doUserFilter(sdef *SDefine, meta map[string]interfac
 		return false, fmt.Errorf("doUserFilter：userfilter节点格式不正确")
 	}
 	dfieldname := ""
-	doper := ""
-	didsname := ""
-	userfield := ""
-	outfield := ""
+
 	if umap["filterkey"] != nil {
 		dfieldname = umap["filterkey"].(string)
 	}
-	if umap["opera"] != nil {
-		doper = umap["opera"].(string)
-	}
-	if umap["ids"] != nil {
-		didsname = umap["ids"].(string)
-	}
-	if umap["userfield"] != nil {
-		userfield = umap["userfield"].(string)
-	}
-	if umap["outfield"] != nil {
-		outfield = umap["outfield"].(string)
-	}
-	if doper == datasource.OperIn || doper == datasource.OperEq {
 
-		if *rBody == nil {
-			*rBody = &SRequestBody{}
-			t := *rBody
-			t.Criteria = make([]CriteriaInRBody, 0, 1)
-		}
+	values := c.getUserFilterValues(umap["values"])
+
+	if *rBody == nil {
+		*rBody = &SRequestBody{}
 		t := *rBody
-		switch doper {
-		case datasource.OperEq:
-			{
-				t.Criteria = append(t.Criteria, CriteriaInRBody{
-					Field:     dfieldname,
-					Operation: datasource.OperEq,
-					Value:     c.CurrentUserId,
-					Relation:  datasource.CompAnd})
-				return true, nil
-			}
-		case datasource.OperIn:
-			{
-				obj := datasource.CreateIDSFromParam(datasource.IDSContainer[didsname])
-				if obj == nil {
-					logs.Error("doUserFilter：服务元数据中定义的userfilter节点，中引用的id为" + didsname + "的数据源不存在")
-					return false, fmt.Errorf("doUserFilter：服务元数据中定义的userfilter节点，中引用的id为" + didsname + "的数据源不存在")
-				}
-				dids, ok := obj.(datasource.IDataSource)
-				if !ok {
-					logs.Error("doUserFilter：服务元数据中定义的userfilter节点，中引用的id为" + didsname + "的数据源没有实现IDataSource接口")
-					return false, fmt.Errorf("doUserFilter：服务元数据中定义的userfilter节点，中引用的id为" + didsname + "的数据源没有实现IDataSource接口")
-				}
-				rs, err := dids.QueryDataByFieldValues(&map[string]interface{}{userfield: c.CurrentUserId})
-				if err != nil {
-					logs.Error("doUserFilter：服务元数据中定义的userfilter节点，中引用的id为" + didsname + "的数据源在查询数据时发生错误：" + err.Error())
-					return false, fmt.Errorf("doUserFilter：服务元数据中定义的userfilter节点，中引用的id为" + didsname + "的数据源在查询数据时发生错误：" + err.Error())
-				}
-				if len(rs.Data) == 0 {
-					t.Criteria = append(t.Criteria, CriteriaInRBody{
-						Field:     dfieldname,
-						Operation: datasource.OperEq,
-						Value:     "",
-						Relation:  datasource.CompAnd})
-				} else {
-					sub := []string{}
-					for _, user := range rs.Data {
-						sub = append(sub, user[rs.Fields[outfield].Index].(string))
-					}
-					t.Criteria = append(t.Criteria, CriteriaInRBody{
-						Field:     dfieldname,
-						Operation: datasource.OperIn,
-						Value:     sub,
-						Relation:  datasource.CompAnd})
-				}
-				return true, nil
-			}
-		}
+		t.Criteria = make([]CriteriaInRBody, 0, 1)
 	}
-	logs.Info("doUserFilter：服务元数据中定义的userfilter节点，opera属性只能是in或者=，但是当前传入的是" + doper + ",当前方法会被忽略")
-	return false, fmt.Errorf("doUserFilter：服务元数据中定义的userfilter节点，opera属性只能是in或者=，但是当前传入的是" + doper + ",当前方法会被忽略")
+	t := *rBody
+
+	if len(values) == 0 {
+		logs.Error("doUserFilter：定义的values节点返回的数据为空")
+		t.Criteria = append(t.Criteria, CriteriaInRBody{
+			Field:     dfieldname,
+			Operation: datasource.OperAlwaysFalse,
+			Value:     "",
+			Relation:  datasource.CompAnd})
+		return true, nil
+	}
+	if len(values) == 1 {
+		t.Criteria = append(t.Criteria, CriteriaInRBody{
+			Field:     dfieldname,
+			Operation: datasource.OperEq,
+			//OperEq操作值处理values节点返回的第一个值
+			Value:    values[0], //c.CurrentUserId,
+			Relation: datasource.CompAnd})
+		return true, nil
+	}
+	if len(values) > 1 {
+		t.Criteria = append(t.Criteria, CriteriaInRBody{
+			Field:     dfieldname,
+			Operation: datasource.OperIn,
+			Value:     values,
+			Relation:  datasource.CompAnd})
+
+		//rs, err := dids.QueryDataByFieldValues(&map[string]interface{}{userfield: c.CurrentUserId})
+		//if err != nil {
+		//	logs.Error("doUserFilter：服务元数据中定义的userfilter节点，中引用的id为" + didsname + "的数据源在查询数据时发生错误：" + err.Error())
+		//	return false, fmt.Errorf("doUserFilter：服务元数据中定义的userfilter节点，中引用的id为" + didsname + "的数据源在查询数据时发生错误：" + err.Error())
+		//}
+		//if len(rs.Data) == 0 {
+		//	t.Criteria = append(t.Criteria, CriteriaInRBody{
+		//		Field:     dfieldname,
+		//		Operation: datasource.OperEq,
+		//		Value:     "",
+		//		Relation:  datasource.CompAnd})
+		//} else {
+		//	sub := []string{}
+		//	for _, user := range rs.Data {
+		//		sub = append(sub, user[rs.Fields[outfield].Index].(string))
+		//	}
+		//	t.Criteria = append(t.Criteria, CriteriaInRBody{
+		//		Field:     dfieldname,
+		//		Operation: datasource.OperIn,
+		//		Value:     sub,
+		//		Relation:  datasource.CompAnd})
+		//}
+		//}
+		return true, nil
+	}
+	return false, fmt.Errorf("doUserFilter：values 节点定义的数据为空")
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -778,9 +827,9 @@ func (c *IDSServiceHandler) doGetValueByKey(sdef *SDefine, meta map[string]inter
 	params := make([]interface{}, len(fs), len(fs))
 	for i, f := range fs {
 		var err error
-		params[i], err = c.ConvertString2Type(c.RRHandler.GetParame(f.Name), f.DataType)
+		params[i], err = c.ConvertString2Type(c.RRHandler.GetParam(f.Name), f.DataType)
 		if err != nil {
-			c.createErrorResponse("类型转换错误" + c.RRHandler.GetParame(f.Name) + " " + f.DataType + " err:" + err.Error())
+			c.createErrorResponse("类型转换错误" + c.RRHandler.GetParam(f.Name) + " " + f.DataType + " err:" + err.Error())
 			return
 		}
 	}

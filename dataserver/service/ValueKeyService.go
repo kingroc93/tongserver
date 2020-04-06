@@ -27,9 +27,9 @@ func (c *ValueKeyService) doGetValueByKey(sdef *SDefine, meta map[string]interfa
 	params := make([]interface{}, len(fs), len(fs))
 	for i, f := range fs {
 		var err error
-		params[i], err = c.ConvertString2Type(c.RRHandler.GetParame(f.Name), f.DataType)
+		params[i], err = c.ConvertString2Type(c.RRHandler.GetParam(f.Name), f.DataType)
 		if err != nil {
-			c.createErrorResponse("类型转换错误" + c.RRHandler.GetParame(f.Name) + " " + f.DataType + " err:" + err.Error())
+			c.createErrorResponse("类型转换错误" + c.RRHandler.GetParam(f.Name) + " " + f.DataType + " err:" + err.Error())
 			return
 		}
 	}

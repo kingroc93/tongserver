@@ -65,14 +65,14 @@ func (c *PredefineServiceHandler) getRBody() *SRequestBody {
 		}
 		for i, cri := range c.predefine.SRequestBody.Criteria {
 			if cri.Value == ":?" {
-				c.predefine.SRequestBody.Criteria[i].Value = c.RRHandler.GetParame(cri.Field)
+				c.predefine.SRequestBody.Criteria[i].Value = c.RRHandler.GetParam(cri.Field)
 			}
 		}
 		return c.merageRbody(rBody)
 	}
 	for i, cri := range c.predefine.SRequestBody.Criteria {
 		if cri.Value == ":?" {
-			c.predefine.SRequestBody.Criteria[i].Value = c.RRHandler.GetParame(cri.Field)
+			c.predefine.SRequestBody.Criteria[i].Value = c.RRHandler.GetParam(cri.Field)
 		}
 	}
 	return &c.predefine.SRequestBody

@@ -164,7 +164,13 @@ func (c *DBDataSource) getRecordByRef(refs []interface{}, cols []string, colsTyp
 // 根据SQL语句查询数据
 func (c *DBDataSource) querySQLData(sqlstr string, params ...interface{}) (*DataResultSet, error) {
 	var err error
-	logs.Debug(sqlstr)
+	if logs.GetBeeLogger().GetLevel() >= logs.LevelTrace {
+		logs.Debug(sqlstr)
+		for _, item := range params {
+			logs.Debug(item)
+		}
+	}
+
 	if c.openedDB == nil {
 		return nil, fmt.Errorf("OpenedDB is nil")
 	}

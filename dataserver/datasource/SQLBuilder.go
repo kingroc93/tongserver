@@ -26,9 +26,11 @@ const (
 	// OperBetween 介于--之间
 	OperBetween string = "BETWEEN"
 	// OperIn 包含
-	OperIn        string = "in"
-	OperIsNull    string = "is null"
-	OperIsNotNull string = "is not null"
+	OperIn          string = "in"
+	OperIsNull      string = "is null"
+	OperIsNotNull   string = "is not null"
+	OperAlwaysFalse string = "alwaysfalse"
+	OperAlwaysTrue  string = "alwaystrue"
 )
 
 const (
@@ -252,6 +254,10 @@ func (c *MySQLSQLBuileder) createCriteriaSubStr(tableName string, criteria []*SQ
 		}
 		var exp string
 		switch cr.Operation {
+		case OperAlwaysFalse:
+			exp = " 1=0 "
+		case OperAlwaysTrue:
+			exp = " 1=1 "
 		case OperBetween:
 			{
 				switch reflect.TypeOf(cr.Value).Kind() {

@@ -24,7 +24,7 @@ const (
 )
 
 // createServiceHandlerInterfaceFun 创建服务处理句柄的函数类型
-type createServiceHandlerInterfaceFun func(*SController, string) SHandlerInterface
+type createServiceHandlerInterfaceFun func(RequestResponseHandler, string) SHandlerInterface
 
 // SHandlerContainer 服务处理句柄容器
 var SHandlerContainer = make(map[string]createServiceHandlerInterfaceFun)
@@ -73,7 +73,7 @@ func (c *ServiceControllerBase) CreateResponseData(style int, data interface{}) 
 		c.Data["json"] = data
 	}
 }
-func (c *ServiceControllerBase) GetParame(name string) string {
+func (c *ServiceControllerBase) GetParam(name string) string {
 	if strings.HasPrefix(name, ":") {
 
 		return c.Ctx.Input.Param(name)
@@ -170,13 +170,13 @@ func (c *SController) DoSrv() {
 
 // init 初始化
 func init() {
-	SHandlerContainer[SrvTypeIds] = func(c *SController, caller string) SHandlerInterface {
+	SHandlerContainer[SrvTypeIds] = func(c RequestResponseHandler, caller string) SHandlerInterface {
 		return &IDSServiceHandler{SHandlerBase{RRHandler: c, CurrentUserId: caller}}
 	}
-	SHandlerContainer[SrvTypePredef] = func(c *SController, caller string) SHandlerInterface {
+	SHandlerContainer[SrvTypePredef] = func(c RequestResponseHandler, caller string) SHandlerInterface {
 		return &PredefineServiceHandler{IDSServiceHandler: IDSServiceHandler{SHandlerBase{RRHandler: c, CurrentUserId: caller}}}
 	}
-	SHandlerContainer[SrvValueKey] = func(c *SController, caller string) SHandlerInterface {
+	SHandlerContainer[SrvValueKey] = func(c RequestResponseHandler, caller string) SHandlerInterface {
 		return &ValueKeyService{SHandlerBase{RRHandler: c, CurrentUserId: caller}}
 	}
 }

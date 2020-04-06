@@ -1,13 +1,11 @@
 package app
 
 import (
-	"fmt"
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/logs"
 	"github.com/astaxie/beego/orm"
 	"github.com/astaxie/beego/plugins/cors"
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/satori/go.uuid"
 	"reflect"
 	"strings"
 	"sync"
@@ -73,39 +71,7 @@ func reloadIds() error {
 	}
 	return nil
 }
-
-func RunApp() {
-	logs.SetLogger("console")
-	logs.Info("====================================================================")
-	u1 := uuid.Must(uuid.NewV4(), nil)
-	logs.Info(u1.String())
-	dbtype := beego.AppConfig.String("db.default.type")
-	username := beego.AppConfig.String("db.default.user")
-	pwd := beego.AppConfig.String("db.default.password")
-	if k, _ := beego.AppConfig.Bool("db.default.password.encrypted"); k {
-
-	}
-
-	service.HASHSECRET = beego.AppConfig.String("jwt.token.hashsecret")
-	service.TokenExpire, _ = beego.AppConfig.Int64("jwt.token.expire")
-
-	if dbtype == "mysql" {
-		dburl := username + ":" + pwd + "@tcp(" + beego.AppConfig.String("db.default.ipport") + ")/" + beego.AppConfig.String("db.default.database")
-		err := orm.RegisterDataBase("default", dbtype, dburl, 30)
-		datasource.DBAlias2DBTypeContainer["default"] = dbtype
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-	}
-
-	mgr.AddMetaFuns("dbalias", reloadDBUrl)
-	mgr.AddMetaFuns("ids", reloadIds)
-	err := mgr.ReloadMetaData()
-	if err != nil {
-		fmt.Println(err.Error())
-		return
-	}
+func CreateIDSCreator() {
 	// 添加ids的创建函数，每一个函数创建一个类型的IDS
 
 	// CreateTableDataSource
@@ -155,7 +121,40 @@ func RunApp() {
 		}
 		return ks
 	})
+}
+func ReadCfg() {
+	logs.SetLogger("console", `{"level":7,"color":true}`)
+	logs.Info("====================================================================")
+	dbtype := beego.AppConfig.String("db.default.type")
+	username := beego.AppConfig.String("db.default.user")
+	pwd := beego.AppConfig.String("db.default.password")
+	if k, _ := beego.AppConfig.Bool("db.default.password.encrypted"); k {
 
+	}
+
+	service.HASHSECRET = beego.AppConfig.String("jwt.token.hashsecret")
+	service.TokenExpire, _ = beego.AppConfig.Int64("jwt.token.expire")
+
+	if dbtype == "mysql" {
+		dburl := username + ":" + pwd + "@tcp(" + beego.AppConfig.String("db.default.ipport") + ")/" + beego.AppConfig.String("db.default.database")
+		err := orm.RegisterDataBase("default", dbtype, dburl, 30)
+		datasource.DBAlias2DBTypeContainer["default"] = dbtype
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	mgr.AddMetaFuns("dbalias", reloadDBUrl)
+	mgr.AddMetaFuns("ids", reloadIds)
+	err := mgr.ReloadMetaData()
+	if err != nil {
+		panic(err)
+	}
+}
+func RunApp() {
+
+	ReadCfg()
+	CreateIDSCreator()
 	// 启动beego应用程序
 	beego.InsertFilter("*", beego.BeforeRouter, cors.Allow(&cors.Options{
 		AllowOrigins:     []string{"http://localhost:8080"},

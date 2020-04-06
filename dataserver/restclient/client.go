@@ -43,6 +43,7 @@ func (c *RestClient) CreateToken(user string, pwd string) (string, error) {
 		return "", err
 	}
 	if (*rm)["result"] == true {
+		c.token = (*rm)["token"].(string)
 		return (*rm)["token"].(string), nil
 	}
 	return "", fmt.Errorf("创建令牌失败，服务端返回:%s", string(body))

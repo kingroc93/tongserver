@@ -64,7 +64,7 @@ type SHandlerInterface interface {
 // 请求响应的接口
 type RequestResponseHandler interface {
 	CreateResponseData(style int, data interface{})
-	GetParame(name string) string
+	GetParam(name string) string
 	GetRequestBody() []byte
 }
 
@@ -119,7 +119,7 @@ func (c *SHandlerBase) DoSrv(sdef *SDefine, inf SHandlerInterface) {
 		c.createErrorResponse("请求的服务没有实现IDataSource接口")
 		return
 	}
-	act := c.RRHandler.GetParame(":action") //c.Ctl.Ctx.Input.Param(":action")
+	act := c.RRHandler.GetParam(":action") //c.Ctl.Ctx.Input.Param(":action")
 	amap := inf.getActionMap()
 	f, ok := amap[act]
 	if !ok {
@@ -137,7 +137,7 @@ func (c *SHandlerBase) getActionMap() map[string]SerivceActionHandler {
 }
 
 func (c *SHandlerBase) getCache(sdef *SDefine, ids datasource.IDataSource, rBody *SRequestBody) (*utils.RestResult, error) {
-	key := c.RRHandler.GetParame(RequestParamCachebykey) //c.Ctl.Input().Get(RequestParamCachebykey)
+	key := c.RRHandler.GetParam(RequestParamCachebykey) //c.Ctl.Input().Get(RequestParamCachebykey)
 	if key == "" {
 		return nil, fmt.Errorf(RequestParamCachebykey + "不得为空")
 	}
@@ -227,11 +227,11 @@ func (c *SHandlerBase) doGetMeta(sdef *SDefine, meta map[string]interface{}, ids
 // setResultSet 设定结果集
 func (c *SHandlerBase) setResultSet(ds *datasource.DataResultSet) {
 	//c.Ctl.Input().Get(RequestParamCache /**_cache**/)
-	if c.RRHandler.GetParame(RequestParamCache /**_cache**/) != "" {
+	if c.RRHandler.GetParam(RequestParamCache /**_cache**/) != "" {
 		// 处理缓存请求 [缓存时间]_[最大请求次数]  10_1  缓存的结果集请求一次即删除，
 		// 最长保存10秒钟，“缓存时间”为0时表示使用系统定义的默认缓存时间，为30s
 		// 缓存的结果集随时都有可能消失
-		cs := c.RRHandler.GetParame(RequestParamCache) //c.Ctl.Input().Get(RequestParamCache)
+		cs := c.RRHandler.GetParam(RequestParamCache) //c.Ctl.Input().Get(RequestParamCache)
 		css := strings.Split(cs, "_")
 		r := utils.CreateRestResult(true)
 		if len(css) != 2 {
@@ -273,9 +273,9 @@ func (c *SHandlerBase) setResultSet(ds *datasource.DataResultSet) {
 	}
 	r := utils.CreateRestResult(true)
 	//if c.Ctl.Input().Get(ResponseStyle) != "map" {
-	if c.RRHandler.GetParame(ResponseStyle) != "map" {
+	if c.RRHandler.GetParam(ResponseStyle) != "map" {
 		//if c.Ctl.Input().Get(RequestParamNofieldsinfo) != "" {
-		if c.RRHandler.GetParame(RequestParamNofieldsinfo) != "" {
+		if c.RRHandler.GetParam(RequestParamNofieldsinfo) != "" {
 			r["data"] = ds.Data
 		} else {
 			r["resultset"] = ds
@@ -290,7 +290,7 @@ func (c *SHandlerBase) setResultSet(ds *datasource.DataResultSet) {
 			result[i] = item
 		}
 		//if c.Ctl.Input().Get(RequestParamNofieldsinfo) != "" {
-		if c.RRHandler.GetParame(RequestParamNofieldsinfo) != "" {
+		if c.RRHandler.GetParam(RequestParamNofieldsinfo) != "" {
 			r["data"] = result
 		} else {
 			rsd := make(map[string]interface{})
@@ -305,8 +305,8 @@ func (c *SHandlerBase) setResultSet(ds *datasource.DataResultSet) {
 
 // setPageParams 设定从querystring传入的公共参数
 func (c *SHandlerBase) setPageParams(ids datasource.IDataSource) {
-	psi, err := strconv.Atoi(c.RRHandler.GetParame(RequestParamPagesize))
-	pii, err2 := strconv.Atoi(c.RRHandler.GetParame(RequestParamPageindex))
+	psi, err := strconv.Atoi(c.RRHandler.GetParam(RequestParamPagesize))
+	pii, err2 := strconv.Atoi(c.RRHandler.GetParam(RequestParamPageindex))
 	if err == nil {
 		ids.SetRowsLimit(psi)
 		if err2 == nil {
