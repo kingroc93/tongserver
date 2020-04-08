@@ -1,3 +1,32 @@
 {
-
+  "name": "流程名称",
+  "start": {
+    "variables": {
+      "参数1": {
+        "type": "string|number|datetime|array|map",
+        "value": {}
+      },
+      "参数1": {
+        "type": "string|number|datetime|array|map",
+        "value": {}
+      }
+    },
+    "flow": [
+      {
+        "gate": "to",
+        "activity1": {
+          "style": "InnerService|Message|Loop",
+          "params": {},
+          "flow": {
+            "ifto": {
+              "if": "Expression",
+              "then": {},
+              "else": {}
+            },
+            "to": {}
+          }
+        }
+      }
+    ]
+  }
 }

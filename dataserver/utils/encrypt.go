@@ -9,6 +9,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/logs"
 	"io"
 )
@@ -158,6 +159,7 @@ func ParseJSONStr2Map(jsonstr string) (*map[string]interface{}, error) {
 	return &meta, nil
 }
 
+// 将json字符串转换为map
 func ParseJSONBytes2Map(jsonbyte []byte) (*map[string]interface{}, error) {
 	meta := make(map[string]interface{})
 	err2 := json.Unmarshal(jsonbyte, &meta)
@@ -166,4 +168,23 @@ func ParseJSONBytes2Map(jsonbyte []byte) (*map[string]interface{}, error) {
 		return nil, err2
 	}
 	return &meta, nil
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// ConvertJSON 装换为Json格式字符串
+func ConvertJSON(data interface{}, encoding ...bool) (string, error) {
+	var (
+		hasIndent = beego.BConfig.RunMode != beego.PROD
+		content   []byte
+		err       error
+	)
+	if hasIndent {
+		content, err = json.MarshalIndent(data, "", "  ")
+	} else {
+		content, err = json.Marshal(data)
+	}
+	if err != nil {
+		return "", err
+	}
+	return string(content), nil
 }

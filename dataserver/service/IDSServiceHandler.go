@@ -357,30 +357,6 @@ func (c *IDSServiceHandler) doUserFilter(sdef *SDefine, meta map[string]interfac
 			Operation: datasource.OperIn,
 			Value:     values,
 			Relation:  datasource.CompAnd})
-
-		//rs, err := dids.QueryDataByFieldValues(&map[string]interface{}{userfield: c.CurrentUserId})
-		//if err != nil {
-		//	logs.Error("doUserFilter：服务元数据中定义的userfilter节点，中引用的id为" + didsname + "的数据源在查询数据时发生错误：" + err.Error())
-		//	return false, fmt.Errorf("doUserFilter：服务元数据中定义的userfilter节点，中引用的id为" + didsname + "的数据源在查询数据时发生错误：" + err.Error())
-		//}
-		//if len(rs.Data) == 0 {
-		//	t.Criteria = append(t.Criteria, CriteriaInRBody{
-		//		Field:     dfieldname,
-		//		Operation: datasource.OperEq,
-		//		Value:     "",
-		//		Relation:  datasource.CompAnd})
-		//} else {
-		//	sub := []string{}
-		//	for _, user := range rs.Data {
-		//		sub = append(sub, user[rs.Fields[outfield].Index].(string))
-		//	}
-		//	t.Criteria = append(t.Criteria, CriteriaInRBody{
-		//		Field:     dfieldname,
-		//		Operation: datasource.OperIn,
-		//		Value:     sub,
-		//		Relation:  datasource.CompAnd})
-		//}
-		//}
 		return true, nil
 	}
 	return false, fmt.Errorf("doUserFilter：values 节点定义的数据为空")

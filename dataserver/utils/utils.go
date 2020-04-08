@@ -14,6 +14,7 @@ const (
 	formatDateTime = "2006-01-02 15:04:05"
 )
 
+// ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // StringSet string 简单的集合类型
 // 底层数据结构使用map
 type StringSet map[string]bool
@@ -50,6 +51,7 @@ func (c *StringSet) Exist(value string) bool {
 	return ok
 }
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // ArrayList 可变长数组
 type ArrayList struct {
 	elements []interface{}
@@ -80,6 +82,48 @@ func (list *ArrayList) Add(values ...interface{}) {
 	}
 }
 
+// Remove 删除元素
+func (list *ArrayList) Remove(index int) interface{} {
+	if index < 0 || index >= list.size {
+		return nil
+	}
+
+	curEle := list.elements[index]
+	list.elements[index] = nil
+	copy(list.elements[index:], list.elements[index+1:list.size])
+	list.size--
+	return curEle
+}
+
+// Get 返回元素
+func (list *ArrayList) Get(index int) interface{} {
+	if index < 0 || index >= list.size {
+		return nil
+	}
+	return list.elements[index]
+}
+
+// IsEmpty 是否为空
+func (list *ArrayList) IsEmpty() bool {
+	return list.size == 0
+}
+
+// Size 返回ArrayList的大小
+func (list *ArrayList) Size() int {
+	return list.size
+}
+
+// Contains 判断是否包含该元素
+func (list *ArrayList) Contains(value interface{}) (bool, int) {
+	for index, curValue := range list.elements {
+		if curValue == value {
+			return true, index
+		}
+	}
+	return false, -1
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // String 用于转换的字符串类型
 type String string
 
@@ -194,6 +238,7 @@ func (f String) Uint64() (uint64, error) {
 	return v, err
 }
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // DateTime 日期
 func (f String) DateTime(format ...string) (time.Time, error) {
 	return f.Date(formatDateTime)
@@ -222,63 +267,4 @@ func (f String) String() string {
 		return string(f)
 	}
 	return ""
-}
-
-// Remove 删除元素
-func (list *ArrayList) Remove(index int) interface{} {
-	if index < 0 || index >= list.size {
-		return nil
-	}
-
-	curEle := list.elements[index]
-	list.elements[index] = nil
-	copy(list.elements[index:], list.elements[index+1:list.size])
-	list.size--
-	return curEle
-}
-
-// Get 返回元素
-func (list *ArrayList) Get(index int) interface{} {
-	if index < 0 || index >= list.size {
-		return nil
-	}
-	return list.elements[index]
-}
-
-// IsEmpty 是否为空
-func (list *ArrayList) IsEmpty() bool {
-	return list.size == 0
-}
-
-// Size 返回ArrayList的大小
-func (list *ArrayList) Size() int {
-	return list.size
-}
-
-// Contains 判断是否包含该元素
-func (list *ArrayList) Contains(value interface{}) (bool, int) {
-	for index, curValue := range list.elements {
-		if curValue == value {
-			return true, index
-		}
-	}
-	return false, -1
-}
-
-// ConvertJSON 装换为Json格式字符串
-func ConvertJSON(data interface{}, encoding ...bool) (string, error) {
-	var (
-		hasIndent = beego.BConfig.RunMode != beego.PROD
-		content   []byte
-		err       error
-	)
-	if hasIndent {
-		content, err = json.MarshalIndent(data, "", "  ")
-	} else {
-		content, err = json.Marshal(data)
-	}
-	if err != nil {
-		return "", err
-	}
-	return string(content), nil
 }
