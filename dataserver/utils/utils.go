@@ -1,8 +1,6 @@
 package utils
 
 import (
-	"encoding/json"
-	"github.com/astaxie/beego"
 	"math/big"
 	"strconv"
 	"time"
@@ -267,4 +265,30 @@ func (f String) String() string {
 		return string(f)
 	}
 	return ""
+}
+
+// 从map里面获取数组
+func GetArrayFromMap(m *map[string]interface{}, name string) []interface{} {
+	v, ok := (*m)[name].([]interface{})
+	if !ok {
+		return nil
+	}
+	return v
+}
+
+// 从map里面获取map[string]interface{}
+func GetMapFromMap(m *map[string]interface{}, name string) *map[string]interface{} {
+	v, ok := (*m)[name]
+	if !ok {
+		return nil
+	}
+	return ConvertObj2Map(v)
+}
+
+func ConvertObj2Map(obj interface{}) *map[string]interface{} {
+	m, ok := obj.(map[string]interface{})
+	if !ok {
+		return nil
+	}
+	return &m
 }

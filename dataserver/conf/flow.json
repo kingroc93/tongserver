@@ -15,16 +15,34 @@
       {
         "gate": "to",
         "activity1": {
-          "style": "InnerService|Message|Loop",
+          "style": "InnerService|Message|Loop|Stdout",
           "params": {},
-          "flow": {
-            "ifto": {
-              "if": "Expression",
-              "then": {},
-              "else": {}
+          "flow": [
+            {
+              "gate":"ifto",
+              "if":"表达式",
+              "then":{},
+              "else":{}
             },
-            "to": {}
-          }
+            {
+              "gate":"ifto",
+              "if":"表达式",
+              "then":{},
+              "else":{}
+            },
+            {
+              "gate":"end"
+            },
+            {
+              "gate":"break"
+            },
+            {
+              "gate":"loop",
+              "var":[{},{}],
+              "range":"",
+              "do":{}
+            }
+          ]
         }
       }
     ]

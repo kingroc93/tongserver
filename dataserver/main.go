@@ -1,6 +1,8 @@
 package main
 
-import "tongserver.dataserver/app"
+import (
+	"tongserver.dataserver/app"
+)
 
 // appname = tongds
 // runmode = dev
@@ -24,5 +26,6 @@ import "tongserver.dataserver/app"
 // redis.pwd = 123456
 
 func main() {
+
 	app.RunApp()
 }
