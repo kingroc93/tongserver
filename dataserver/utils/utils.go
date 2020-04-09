@@ -2,6 +2,7 @@ package utils
 
 import (
 	"math/big"
+	"reflect"
 	"strconv"
 	"time"
 )
@@ -291,4 +292,29 @@ func ConvertObj2Map(obj interface{}) *map[string]interface{} {
 		return nil
 	}
 	return &m
+}
+
+// 将interfa{}转换为bool类型
+func ConvertObj2Bool(obj interface{}) bool {
+	if obj != nil {
+		switch reflect.TypeOf(obj).Kind() {
+		case reflect.Bool:
+			return obj.(bool)
+		case reflect.String:
+			b, err := strconv.ParseBool(obj.(string))
+			if err != nil {
+				return false
+			}
+			return b
+		case reflect.Int, reflect.Int64, reflect.Int8, reflect.Int16, reflect.Int32:
+			return obj.(int64) != 0
+		case reflect.Float32, reflect.Float64:
+			return obj.(float64) != 0
+		case reflect.Slice, reflect.Array:
+			return reflect.ValueOf(obj).Len() != 0
+		default:
+			return true
+		}
+	}
+	return false
 }

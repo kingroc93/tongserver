@@ -1,0 +1,61 @@
+package activity
+
+import (
+	"fmt"
+	"strings"
+)
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+type IActivity interface {
+	Execute(flowcontext IContext)
+}
+type Activity struct {
+	Style  int
+	define *map[string]interface{}
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+type StdOutActivity struct {
+	Activity
+}
+
+func NewStdOutActivity(def *map[string]interface{}) *StdOutActivity {
+	return &StdOutActivity{Activity{define: def}}
+}
+
+// 创建活动
+func CreateActivity(def *map[string]interface{}) (IActivity, error) {
+	style, ok := (*def)["style"]
+	if !ok {
+		return nil, fmt.Errorf("创建Activiti失败，缺少style属性")
+	}
+	sStyle := strings.ToLower(style.(string))
+	if sStyle == "stdout" {
+		return NewStdOutActivity(def), nil
+	}
+	if sStyle == "innerservice" {
+		return nil, nil
+	}
+	if sStyle == "message" {
+		return nil, nil
+	}
+	if sStyle == "process" {
+		return nil, nil
+	}
+	return nil, nil
+}
+
+func (c *StdOutActivity) Execute(flowcontext IContext) {
+	flowcontext.ForEachParams(func(name string, value interface{}) {
+
+		fmt.Printf("%s : %s \n", name, value)
+	})
+	flowcontext.ForEachParams(func(name string, value interface{}) {
+		fmt.Printf("%s : %s \n", name, value)
+	})
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
