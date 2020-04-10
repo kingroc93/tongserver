@@ -72,7 +72,11 @@ func NewFlowInstance(define *map[string]interface{}) (*FlowInstance, error) {
 		if inf == nil {
 			return nil, fmt.Errorf("创建流程实例失败，start节点的flow属性必须为一个对象数组")
 		}
-		inst.flows[index] = NewFlow(inf)
+		f, err := NewFlow(inf, inst)
+		if err == nil {
+			return nil, err
+		}
+		inst.flows[index] = f
 	}
 	return inst, nil
 }

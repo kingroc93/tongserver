@@ -34,7 +34,7 @@ func TestExpression_DoExpression(t *testing.T) {
 	cnt.SetVarbiable("y", 2)
 	cnt.SetParam("z", 4)
 	cnt.SetParam("q", 100)
-	b, err := NewExpression("x+y+z>q").DoExpression(cnt)
+	b, err := NewExpression("q+x+y+z").doExpression(cnt)
 	if err != nil {
 		fmt.Println(err.Error())
 	}

@@ -59,7 +59,7 @@ func (c *FlowLoop) DoFlow(flowcontext IContext) FlowResult {
 	return FR_CONINUE
 }
 
-func NewFlowTo(define *map[string]interface{}, flowInstance FlowInstance) (*FlowTo, error) {
+func NewFlowTo(define *map[string]interface{}, flowInstance *FlowInstance) (*FlowTo, error) {
 	acts := make(map[string]IActivity)
 	for k, v := range *define {
 		if k == "gate" {
@@ -97,7 +97,7 @@ func NewFlowTo(define *map[string]interface{}, flowInstance FlowInstance) (*Flow
 	}
 	return f, nil
 }
-func NewFlowIfTo(define map[string]interface{}, flowInstance FlowInstance) (*FlowIfTo, error) {
+func NewFlowIfTo(define *map[string]interface{}, flowInstance *FlowInstance) (*FlowIfTo, error) {
 	f := &FlowIfTo{
 		Flow: Flow{
 			gate: F_IFTO,
@@ -105,7 +105,7 @@ func NewFlowIfTo(define map[string]interface{}, flowInstance FlowInstance) (*Flo
 	}
 	return f, nil
 }
-func NewFlowLoop(define map[string]interface{}, flowInstance FlowInstance) (*FlowLoop, error) {
+func NewFlowLoop(define *map[string]interface{}, flowInstance *FlowInstance) (*FlowLoop, error) {
 	f := &FlowLoop{
 		Flow: Flow{
 			gate: F_IFLOOP,
@@ -114,7 +114,7 @@ func NewFlowLoop(define map[string]interface{}, flowInstance FlowInstance) (*Flo
 	return f, nil
 }
 
-func NewFlow(d *map[string]interface{}, flowInstance FlowInstance) (IFlow, error) {
+func NewFlow(d *map[string]interface{}, flowInstance *FlowInstance) (IFlow, error) {
 	gate, ok := (*d)["gate"]
 	if !ok {
 		return nil, fmt.Errorf("缺少gate属性")
