@@ -32,11 +32,16 @@ func TestExpression_DoExpression(t *testing.T) {
 	cnt := NewContext()
 	cnt.SetVarbiable("x", 1)
 	cnt.SetVarbiable("y", 2)
-	cnt.SetParam("z", 4)
-	cnt.SetParam("q", 100)
-	b, err := NewExpression("q+x+y+z").doExpression(cnt)
+
+	b, err := DoExpression("q+x+y+z", cnt)
 	if err != nil {
 		fmt.Println(err.Error())
 	}
 	fmt.Println(b)
+}
+
+func TestSplitAssignExpression(t *testing.T) {
+	fmt.Println(SplitAssignExpression("a =1+1"))
+	fmt.Println(SplitAssignExpression(" a = 1+1"))
+	fmt.Println(SplitAssignExpression("a ==1+1"))
 }

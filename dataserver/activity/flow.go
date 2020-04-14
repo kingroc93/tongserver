@@ -2,7 +2,6 @@ package activity
 
 import (
 	"fmt"
-	"reflect"
 	"tongserver.dataserver/utils"
 )
 
@@ -20,7 +19,24 @@ const (
 )
 
 type IFlow interface {
-	DoFlow(flowcontext IContext) FlowResult
+	DoFlow(flowcontext IContext) (FlowResult, error)
+}
+
+type Flows struct {
+	flows []IFlow
+}
+
+func (c *Flows) ExecuteFlows(flowcontext IContext) error {
+	for _, item := range c.flows {
+		rs, err := item.DoFlow(flowcontext)
+		if err != nil {
+			return err
+		}
+		if rs == FR_BREAK {
+			break
+		}
+	}
+	return nil
 }
 
 type Flow struct {
@@ -35,7 +51,7 @@ type FlowTo struct {
 
 type FlowIfTo struct {
 	Flow
-	expression  Expression
+	expression  string
 	thenAct     *map[string]IActivity
 	elseThenAct *map[string]IActivity
 }
@@ -44,64 +60,77 @@ type FlowLoop struct {
 	Flow
 }
 
-func (c *FlowTo) DoFlow(flowcontext IContext) FlowResult {
+func (c *FlowTo) DoFlow(flowcontext IContext) (FlowResult, error) {
 	for _, v := range *c.activitys {
-		v.Execute(flowcontext)
+		err := v.Execute(flowcontext)
+		if err != nil {
+			return FR_BREAK, err
+		}
 	}
-	return FR_CONINUE
+	return FR_CONINUE, nil
 }
 
-func (c *FlowIfTo) DoFlow(flowcontext IContext) FlowResult {
-	return FR_CONINUE
+func (c *FlowIfTo) DoFlow(flowcontext IContext) (FlowResult, error) {
+	return FR_CONINUE, nil
 }
 
-func (c *FlowLoop) DoFlow(flowcontext IContext) FlowResult {
-	return FR_CONINUE
+func (c *FlowLoop) DoFlow(flowcontext IContext) (FlowResult, error) {
+	return FR_CONINUE, nil
 }
 
+// {
+//        "gate": "to",
+//        "activity1": {
+//			"expressions":["var_b=var_b+10"],
+//			"style":"stdout"
+//		}
+//	}
 func NewFlowTo(define *map[string]interface{}, flowInstance *FlowInstance) (*FlowTo, error) {
-	acts := make(map[string]IActivity)
-	for k, v := range *define {
-		if k == "gate" {
-			//忽略gate属性
-			continue
-		}
-		if _, ok := (*flowInstance.GlobaActivityContainer)[k]; ok {
-			return nil, fmt.Errorf("Activity在flow实例中唯一")
-		}
-		if reflect.TypeOf(v).Kind() == reflect.String {
-			//值是字符串时表示直接引用之前声明过得activity
-			act, ok := (*flowInstance.GlobaActivityContainer)[k]
-			if !ok {
-				return nil, fmt.Errorf("没有找到已经声明的activity，%s", k)
-			}
-			acts[k] = act
-		} else {
-			m := utils.ConvertObj2Map(v)
-			if m == nil {
-				return nil, fmt.Errorf("创建flow失败，toflow中除了gate属性外其他属性应该为对象")
-			}
-			act, err := CreateActivity(m)
-			if err != nil {
-				return nil, fmt.Errorf("创建flow失败，%s", err)
-			}
-			acts[k] = act
-			(*flowInstance.GlobaActivityContainer)[k] = act
-		}
+	acts, err := CreateActivitys(define, flowInstance, []string{"gate"})
+	if err != nil {
+		return nil, err
 	}
 	f := &FlowTo{
 		Flow: Flow{
 			gate: F_TO,
 		},
-		activitys: &acts,
+		activitys: acts,
 	}
 	return f, nil
 }
+
+//{
+//    "gate":"ifto",
+//    "if":"表达式",
+//    "then":{},
+//    "else":{}
+//}
 func NewFlowIfTo(define *map[string]interface{}, flowInstance *FlowInstance) (*FlowIfTo, error) {
 	f := &FlowIfTo{
 		Flow: Flow{
 			gate: F_IFTO,
 		},
+	}
+	exp, ok := (*define)["if"]
+	if !ok {
+		return nil, fmt.Errorf("创建ifto失败，没有if属性")
+	}
+	f.expression = exp.(string)
+	then := utils.GetMapFromMap(define, "then")
+	if then == nil {
+		return nil, fmt.Errorf("创建ifto失败，没有then属性")
+	}
+	am, err := CreateActivitys(then, flowInstance, nil)
+	if err != nil {
+		return nil, fmt.Errorf("创建ifto失败，then创建失败，%s", err.Error())
+	}
+	f.thenAct = am
+	els := utils.GetMapFromMap(define, "else")
+	if els != nil {
+		f.elseThenAct, err = CreateActivitys(els, flowInstance, nil)
+		if err != nil {
+			return nil, fmt.Errorf("创建ifto失败，else 创建失败，%s", err.Error())
+		}
 	}
 	return f, nil
 }
@@ -132,6 +161,24 @@ func NewFlow(d *map[string]interface{}, flowInstance *FlowInstance) (IFlow, erro
 	}
 	if sg == "loop" {
 		return NewFlowLoop(d, flowInstance)
+	}
+	return nil, nil
+}
+func CreateFlows(flows []interface{}, inst *FlowInstance) ([]IFlow, error) {
+	if len(flows) > 0 {
+		iflows := make([]IFlow, len(flows), len(flows))
+		for index, item := range flows {
+			inf := utils.ConvertObj2Map(item)
+			if inf == nil {
+				return nil, fmt.Errorf("创建流程实例失败，start节点的flow属性必须为一个对象数组")
+			}
+			f, err := NewFlow(inf, inst)
+			if err != nil {
+				return nil, err
+			}
+			iflows[index] = f
+		}
+		return iflows, nil
 	}
 	return nil, nil
 }

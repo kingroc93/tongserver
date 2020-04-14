@@ -317,51 +317,5 @@ func (c *SHandlerBase) setPageParams(ids datasource.IDataSource) {
 
 // ConvertString2Type 转换字符串为指定的类型，转换不成功返回nil
 func (c *SHandlerBase) ConvertString2Type(value string, vtype string) (interface{}, error) {
-	switch vtype {
-	case datasource.PropertyDatatypeInt:
-		{
-			i, err := strconv.Atoi(value)
-			if err != nil {
-				return nil, err
-			}
-			return i, nil
-		}
-	case datasource.PropertyDatatypeDou:
-		{
-			i, err := strconv.ParseFloat(value, 64)
-			if err != nil {
-				return nil, err
-			}
-			return i, nil
-		}
-	case datasource.PropertyDatatypeStr:
-		return value, nil
-
-	case datasource.PropertyDatatypeDate:
-		{
-			theTime, err := time.Parse("2006-01-02", value)
-			if err != nil {
-				return nil, err
-			}
-			return theTime, nil
-		}
-	case datasource.PropertyDatatypeTime:
-		{
-
-			theTime, err := time.Parse("2006-01-02 15:04:05", value)
-			if err != nil {
-				theTime, err := time.Parse("2006-01-02", value)
-				if err != nil {
-					return nil, err
-				}
-				return theTime, nil
-			}
-			return theTime, nil
-		}
-	case datasource.PropertyDatatypeEnum:
-		return value, nil
-	case datasource.PropertyDatatypeUnkn:
-		return value, nil
-	}
-	return value, nil
+	return utils.ConvertString2Type(value, vtype)
 }

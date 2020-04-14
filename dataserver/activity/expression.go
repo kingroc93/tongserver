@@ -2,29 +2,24 @@ package activity
 
 import (
 	"github.com/antonmedv/expr"
+	"strings"
 	"tongserver.dataserver/utils"
 )
 
-// 表达式类
-// 使用github.com/antonmedv/expr作为表达式处理引擎
-type Expression struct {
-	expression string
+const (
+	ASSIGN_OPER string = "="
+)
+
+func DoExpression(expression string, context IContext) (interface{}, error) {
+	return DoExpression2(expression, *context.getVariableMap())
 }
 
 // 执行表达式
-func (c *Expression) doExpression(context IContext) (interface{}, error) {
-	env := make(map[string]interface{})
-	context.ForEachParams(func(name string, value interface{}) {
-		env[name] = value
-	})
-	context.ForEachVariable(func(name string, value interface{}) {
-		env[name] = value
-	})
-	program, err := expr.Compile(c.expression, expr.Env(env))
+func DoExpression2(expression string, env map[string]interface{}) (interface{}, error) {
+	program, err := expr.Compile(expression, expr.Env(env))
 	if err != nil {
 		return nil, err
 	}
-
 	output, err := expr.Run(program, env)
 	if err != nil {
 		return nil, err
@@ -32,54 +27,29 @@ func (c *Expression) doExpression(context IContext) (interface{}, error) {
 	return output, nil
 }
 
+func DoExpressionBool(expression string, context IContext) (bool, error) {
+	return DoExpressionBool2(expression, *context.getVariableMap())
+}
+
 // 运行表达式 返回true or false
-func (c *Expression) DoExpressionBool(context IContext) (bool, error) {
-	output, err := c.doExpression(context)
+func DoExpressionBool2(expression string, env map[string]interface{}) (bool, error) {
+	output, err := DoExpression2(expression, env)
 	if err != nil {
 		return false, err
 	}
 	return utils.ConvertObj2Bool(output), nil
 }
 
-// 赋值表达式
-type AssignExpress struct {
-	Expression
-	AssignName string
-}
-
-// 执行赋值表达式
-func (c *AssignExpress) DoExpression(context IContext) (interface{}, error) {
-	out, err := c.doExpression(context)
-	if err != nil {
-		return nil, err
+func SplitAssignExpression(expression string) (string, string, bool) {
+	exp := strings.TrimSpace(expression)
+	i := strings.Index(exp, ASSIGN_OPER)
+	if i == -1 {
+		return "", exp, false
 	}
-	context.SetVarbiable(c.AssignName, out)
-	return out, err
-}
-
-// 创建一个赋值表达式
-// 为了方便从定义信息中获取数据，这里的参数为interface{}类型
-// 实际define为map[string]string类型，包含assign属性和exp属性
-// exp属性是string类型定义一个表达式
-// assign属性是string类型，定义表达式运行成功后将值写入的变量名。
-// 该变量名可以不存在。
-func NewAssignExpress(define interface{}) *AssignExpress {
-	n, ok := define.(map[string]string)
-	if ok {
-		return &AssignExpress{
-			Expression: Expression{
-				expression: n["exp"],
-			},
-			AssignName: n["assign"]}
+	if i == strings.Index(exp, "==") {
+		return "", exp, false
 	}
-	return nil
-}
-
-// 创建一个表达式，为了方便从定义信息中获取数据，这里的参数为interface{}类型，实际必须是string类型
-func NewExpression(define interface{}) *Expression {
-	m, ok := define.(string)
-	if ok {
-		return &Expression{expression: m}
-	}
-	return nil
+	varname := exp[0:i]
+	nexp := exp[i+1:]
+	return varname, nexp, true
 }

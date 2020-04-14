@@ -408,7 +408,7 @@ func (c *IDSServiceHandler) doAllData(sdef *SDefine, meta map[string]interface{}
 // today
 func (c *IDSServiceHandler) convertParamValues(value string, datatype string) (interface{}, error) {
 	//特殊处理日期类型
-	if datatype == datasource.PropertyDatatypeTime || datatype == datasource.PropertyDatatypeDate {
+	if datatype == utils.PropertyDatatypeTime || datatype == utils.PropertyDatatypeDate {
 		switch {
 		case strings.HasPrefix(value, "addday"):
 			{

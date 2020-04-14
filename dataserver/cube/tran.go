@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 	"tongserver.dataserver/datasource"
+	"tongserver.dataserver/utils"
 )
 
 // DataSetBulldozerOperator 数据集后处理句柄，返回新的结果集
@@ -177,11 +178,11 @@ func GroupField(data *datasource.DataResultSet, fieldname string) *datasource.Da
 	result.Fields = make(datasource.FieldDescType)
 	result.Fields[fieldname] = &datasource.FieldDesc{
 		Index:     0,
-		FieldType: datasource.PropertyDatatypeStr,
+		FieldType: utils.PropertyDatatypeStr,
 		Meta:      nil}
 	result.Fields["DATA"] = &datasource.FieldDesc{
 		Index:     1,
-		FieldType: datasource.PropertyDatatypeDs,
+		FieldType: utils.PropertyDatatypeDs,
 		Meta:      nil}
 	result.Data = make([][]interface{}, len(temp), len(temp))
 	i := 0

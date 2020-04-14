@@ -1,5 +1,34 @@
 package datasource
 
+import (
+	"reflect"
+	"strconv"
+	"time"
+)
+
+const (
+	// PropertyDatatypeInt 整数
+	PropertyDatatypeInt string = "INT"
+	// PropertyDatatypeDou 浮点数
+	PropertyDatatypeDou string = "DOUBLE"
+	// PropertyDatatypeStr 字符串
+	PropertyDatatypeStr string = "STRING"
+	// PropertyDatatypeDate 日期
+	PropertyDatatypeDate string = "DATE"
+	// PropertyDatatypeTime 时间
+	PropertyDatatypeTime string = "TIME"
+	// PropertyDatatypeEnum 枚举类型
+	PropertyDatatypeEnum string = "ENUM"
+	// PropertyDatatypeDs 数据集，表示该数据数值是一个数据集
+	PropertyDatatypeDs string = "DATASET"
+	// PropertyDatatypeUnkn 未知类型
+	PropertyDatatypeUnkn string = ""
+	// 字典类型
+	PropertyDatetypeMap string = "MAP"
+	// 数组类型
+	PropertyDatetypeArray string = "ARRAY"
+)
+
 // TDFilter 过滤条件
 type TDFilter SQLCriteria
 
@@ -102,25 +131,6 @@ func GetDataSourceTypeStr(t DSType) string {
 	}
 	return "UNKNOW"
 }
-
-const (
-	// PropertyDatatypeInt 整数
-	PropertyDatatypeInt string = "INT"
-	// PropertyDatatypeDou 浮点数
-	PropertyDatatypeDou string = "DOUBLE"
-	// PropertyDatatypeStr 字符串
-	PropertyDatatypeStr string = "STRING"
-	// PropertyDatatypeDate 日期
-	PropertyDatatypeDate string = "DATE"
-	// PropertyDatatypeTime 时间
-	PropertyDatatypeTime string = "TIME"
-	// PropertyDatatypeEnum 枚举类型
-	PropertyDatatypeEnum string = "ENUM"
-	// PropertyDatatypeDs 数据集，表示该数据数值是一个数据集
-	PropertyDatatypeDs string = "DATASET"
-	// PropertyDatatypeUnkn 未知类型
-	PropertyDatatypeUnkn string = ""
-)
 
 // OutFieldProperty 联接时使用的输出字段
 type OutFieldProperty struct {
@@ -294,4 +304,105 @@ func CreateFieldNonType(fields ...string) []*MyProperty {
 		}
 	}
 	return temp
+}
+func DefaultTypeValue(vtype string) interface{} {
+	switch vtype {
+	case PropertyDatatypeInt, PropertyDatatypeDou:
+		return 0
+	case PropertyDatatypeStr:
+		return ""
+	case PropertyDatatypeDate, PropertyDatatypeTime:
+		return time.Now()
+	default:
+		return nil
+	}
+}
+
+// ConvertString2Type
+func ConvertString2Type(value string, vtype string) (interface{}, error) {
+	switch vtype {
+	case PropertyDatatypeInt:
+		{
+			i, err := strconv.Atoi(value)
+			if err != nil {
+				return nil, err
+			}
+			return i, nil
+		}
+	case PropertyDatatypeDou:
+		{
+			i, err := strconv.ParseFloat(value, 64)
+			if err != nil {
+				return nil, err
+			}
+			return i, nil
+		}
+	case PropertyDatatypeStr:
+		return value, nil
+
+	case PropertyDatatypeDate:
+		{
+			theTime, err := time.Parse("2006-01-02", value)
+			if err != nil {
+				return nil, err
+			}
+			return theTime, nil
+		}
+	case PropertyDatatypeTime:
+		{
+
+			theTime, err := time.Parse("2006-01-02 15:04:05", value)
+			if err != nil {
+				theTime, err := time.Parse("2006-01-02", value)
+				if err != nil {
+					return nil, err
+				}
+				return theTime, nil
+			}
+			return theTime, nil
+		}
+	case PropertyDatatypeEnum:
+		return value, nil
+	case PropertyDatatypeUnkn:
+		return value, nil
+	}
+	return value, nil
+}
+
+func RelectType2InnerType(obj interface{}) string {
+	switch obj.(type) {
+	case string:
+		return PropertyDatatypeStr
+	case int, uint, uint8, uint16, uint32, uint64, int8, int16, int32, int64:
+		return PropertyDatatypeInt
+	case float64, float32, complex64, complex128:
+		return PropertyDatatypeDou
+	case time.Time:
+		return PropertyDatatypeTime
+	case DataResultSet:
+		return PropertyDatatypeDs
+	default:
+		switch reflect.TypeOf(obj).Kind() {
+		case reflect.Slice, reflect.Array:
+			return PropertyDatetypeArray
+		case reflect.Map:
+			return PropertyDatetypeMap
+		}
+		return PropertyDatatypeUnkn
+	}
+}
+func ValidPropertyType(ty string) bool {
+	if ty == PropertyDatatypeInt ||
+		ty == PropertyDatatypeDou ||
+		ty == PropertyDatatypeStr ||
+		ty == PropertyDatatypeDate ||
+		ty == PropertyDatatypeTime ||
+		ty == PropertyDatatypeEnum ||
+		ty == PropertyDatatypeDs ||
+		ty == PropertyDatatypeUnkn ||
+		ty == PropertyDatetypeMap ||
+		ty == PropertyDatetypeArray {
+		return true
+	}
+	return false
 }
