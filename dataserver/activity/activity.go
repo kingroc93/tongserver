@@ -17,8 +17,7 @@ type IActivity interface {
 // 基础活动包括一个类型属性、唯一活动名称属性，还可以附加一组表达式
 type Activity struct {
 	Flows
-	Style  int
-	Name   string
+	Style  string
 	Exp    []string
 	define *map[string]interface{}
 }
@@ -65,23 +64,14 @@ type StdOutActivity struct {
 }
 
 // 创建一个控制台输出活动
-func NewStdOutActivity(def *map[string]interface{}) *StdOutActivity {
-	act := &StdOutActivity{Activity{define: def}}
-	m := (*def)["expressions"]
-	if m != nil {
-		dd := m.([]interface{})
-		act.Exp = make([]string, len(dd), len(dd))
-		for index, d := range dd {
-			act.Exp[index] = d.(string)
-		}
-	}
-
+func NewStdOutActivity(acti *Activity) *StdOutActivity {
+	act := &StdOutActivity{Activity: *acti}
 	return act
 }
 
 // 创建一组活动
-func CreateActivitys(define *map[string]interface{}, flowInstance *FlowInstance, igname []string) (*map[string]IActivity, error) {
-	acts := make(map[string]IActivity)
+func CreateActivitys(define *map[string]interface{}, flowInstance *FlowInstance, igname []string) (*map[string]*IActivity, error) {
+	acts := make(map[string]*IActivity)
 actLoop:
 	for k, v := range *define {
 		if igname != nil {
@@ -99,23 +89,31 @@ actLoop:
 			}
 			acts[k] = act
 		} else {
+			_, ok := (*flowInstance.GlobaActivityContainer)[k]
+			if ok {
+				return nil, fmt.Errorf("创建flow失败，Actitity名称不唯一")
+			}
 			m := utils.ConvertObj2Map(v)
 			if m == nil {
 				return nil, fmt.Errorf("创建flow失败，toflow中除了gate属性外其他属性应该为对象")
 			}
-			act, err := CreateActivity(m)
+			var actp IActivity = nil
+			acts[k] = &actp
+			(*flowInstance.GlobaActivityContainer)[k] = &actp
+
+			act, err := CreateActivity(m, flowInstance)
 			if err != nil {
 				return nil, fmt.Errorf("创建flow失败，%s", err)
 			}
-			acts[k] = act
-			(*flowInstance.GlobaActivityContainer)[k] = act
+			*acts[k] = act
+			*(*flowInstance.GlobaActivityContainer)[k] = act
 		}
 	}
 	return &acts, nil
 }
 
 // 创建活动
-func CreateActivity(def *map[string]interface{}) (IActivity, error) {
+func CreateActivity(def *map[string]interface{}, inst *FlowInstance) (IActivity, error) {
 	style, ok := (*def)["style"]
 	if !ok {
 		return nil, fmt.Errorf("创建Activiti失败，缺少style属性")
@@ -123,11 +121,40 @@ func CreateActivity(def *map[string]interface{}) (IActivity, error) {
 
 	sStyle := strings.ToLower(style.(string))
 
+	/*
+		type Activity struct {
+			Flows
+			Style  int
+			Exp    []string
+			define *map[string]interface{}
+		}
+	*/
+
+	acti := &Activity{define: def}
+	acti.Style = sStyle
+	////////////////////////////////////////////////////
+	m := (*def)["expressions"]
+	if m != nil {
+		dd := m.([]interface{})
+		acti.Exp = make([]string, len(dd), len(dd))
+		for index, d := range dd {
+			acti.Exp[index] = d.(string)
+		}
+	}
+	////////////////////////////////////////////////////
+	flows := utils.GetArrayFromMap(def, "flow")
+	fs, err := CreateFlows(flows, inst)
+	if err != nil {
+		return nil, fmt.Errorf("创建Activity失败，%s", err.Error())
+	}
+	acti.flows = fs
+	////////////////////////////////////////////////////
 	if style == "normal" {
 
 	}
 	if sStyle == "stdout" {
-		return NewStdOutActivity(def), nil
+		act := NewStdOutActivity(acti)
+		return act, nil
 	}
 	if sStyle == "innerservice" {
 		return nil, nil

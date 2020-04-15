@@ -14,6 +14,7 @@ const (
 type FlowResult uint8
 
 const (
+	FR_ERROR   FlowResult = 0
 	FR_CONINUE FlowResult = 1
 	FR_BREAK   FlowResult = 2
 )
@@ -46,23 +47,25 @@ type Flow struct {
 }
 type FlowTo struct {
 	Flow
-	activitys *map[string]IActivity
+	activitys *map[string]*IActivity
 }
 
 type FlowIfTo struct {
 	Flow
 	expression  string
-	thenAct     *map[string]IActivity
-	elseThenAct *map[string]IActivity
+	thenAct     *map[string]*IActivity
+	elseThenAct *map[string]*IActivity
 }
 
 type FlowLoop struct {
 	Flow
+	assignExpression string
+	whileExpression  string
 }
 
-func (c *FlowTo) DoFlow(flowcontext IContext) (FlowResult, error) {
-	for _, v := range *c.activitys {
-		err := v.Execute(flowcontext)
+func (c *Flow) executeActivitys(activitys *map[string]*IActivity, flowcontext IContext) (FlowResult, error) {
+	for _, v := range *activitys {
+		err := (*v).Execute(flowcontext)
 		if err != nil {
 			return FR_BREAK, err
 		}
@@ -70,8 +73,24 @@ func (c *FlowTo) DoFlow(flowcontext IContext) (FlowResult, error) {
 	return FR_CONINUE, nil
 }
 
+func (c *FlowTo) DoFlow(flowcontext IContext) (FlowResult, error) {
+	return c.executeActivitys(c.activitys, flowcontext)
+}
+
 func (c *FlowIfTo) DoFlow(flowcontext IContext) (FlowResult, error) {
+	r, err := DoExpressionBool(c.expression, flowcontext)
+	if err != nil {
+		return FR_ERROR, fmt.Errorf("执行表达式 %s 发生错误,%s", c.expression, err.Error())
+	}
+	if r {
+		return c.executeActivitys(c.thenAct, flowcontext)
+	} else {
+		if c.elseThenAct != nil {
+			return c.executeActivitys(c.elseThenAct, flowcontext)
+		}
+	}
 	return FR_CONINUE, nil
+
 }
 
 func (c *FlowLoop) DoFlow(flowcontext IContext) (FlowResult, error) {

@@ -14,7 +14,7 @@ type FlowInstance struct {
 	id                     string
 	name                   string
 	define                 *map[string]interface{}
-	GlobaActivityContainer *map[string]IActivity
+	GlobaActivityContainer *map[string]*IActivity
 }
 
 func (c *FlowInstance) Execute(params *map[string]interface{}) error {
@@ -31,8 +31,8 @@ func (c *FlowInstance) Execute(params *map[string]interface{}) error {
 			}
 		}
 	}
-	c.ExecuteFlows(c)
-	return nil
+
+	return c.ExecuteFlows(c)
 }
 
 func NewFlowInstanceFromJSON(json string) (*FlowInstance, error) {
@@ -59,7 +59,7 @@ func NewFlowInstance(define *map[string]interface{}) (*FlowInstance, error) {
 	if flows == nil {
 		return nil, fmt.Errorf("创建流程实例失败，start节点的flow属性必须为一个数组")
 	}
-	gs := make(map[string]IActivity)
+	gs := make(map[string]*IActivity)
 	t := make(map[string]interface{})
 	ty := make(map[string]string)
 	inst := &FlowInstance{
