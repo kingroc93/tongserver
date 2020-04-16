@@ -40,6 +40,28 @@ func DoExpressionBool2(expression string, env map[string]interface{}) (bool, err
 	return utils.ConvertObj2Bool(output), nil
 }
 
+func ExecuteExpressions(flowcontext IContext, exps []string) error {
+	env := *flowcontext.getVariableMap()
+	vmap := make(map[string]interface{})
+	for _, exp := range exps {
+		v, e, ok := SplitAssignExpression(exp)
+		if ok {
+			vr, err := DoExpression2(e, env)
+			if err != nil {
+				return err
+			}
+			vmap[v] = vr
+		} else {
+			_, err := DoExpression2(exp, env)
+			return err
+		}
+	}
+	for k, v := range vmap {
+		flowcontext.SetVarbiable(k, v)
+	}
+	return nil
+}
+
 func SplitAssignExpression(expression string) (string, string, bool) {
 	exp := strings.TrimSpace(expression)
 	i := strings.Index(exp, ASSIGN_OPER)

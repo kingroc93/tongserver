@@ -40,31 +40,38 @@ func (c *Flows) ExecuteFlows(flowcontext IContext) error {
 	return nil
 }
 
+// 基本流程
 type Flow struct {
 	gate         int
 	define       map[string]interface{}
 	flowInstance FlowInstance
 }
+
+// 直通flow
 type FlowTo struct {
 	Flow
-	activitys *map[string]*IActivity
+	activitys []*IActivity
 }
 
+// 条件flow
 type FlowIfTo struct {
 	Flow
 	expression  string
-	thenAct     *map[string]*IActivity
-	elseThenAct *map[string]*IActivity
+	thenAct     []*IActivity
+	elseThenAct []*IActivity
 }
 
+// 循环flow
 type FlowLoop struct {
 	Flow
-	assignExpression string
+	assignExpression []string
 	whileExpression  string
+	stepExcpression  []string
+	dotarget         []*IActivity
 }
 
-func (c *Flow) executeActivitys(activitys *map[string]*IActivity, flowcontext IContext) (FlowResult, error) {
-	for _, v := range *activitys {
+func (c *Flow) executeActivitys(activitys []*IActivity, flowcontext IContext) (FlowResult, error) {
+	for _, v := range activitys {
 		err := (*v).Execute(flowcontext)
 		if err != nil {
 			return FR_BREAK, err
@@ -94,6 +101,34 @@ func (c *FlowIfTo) DoFlow(flowcontext IContext) (FlowResult, error) {
 }
 
 func (c *FlowLoop) DoFlow(flowcontext IContext) (FlowResult, error) {
+	if len(c.assignExpression) != 0 {
+		err := ExecuteExpressions(flowcontext, c.assignExpression)
+		if err != nil {
+			return FR_ERROR, err
+		}
+	}
+	for {
+		b, err := DoExpressionBool(c.whileExpression, flowcontext)
+		if err != nil {
+			return FR_ERROR, err
+		}
+		if !b {
+			break
+		}
+		ft, err := c.executeActivitys(c.dotarget, flowcontext)
+		if err != nil {
+			return FR_ERROR, err
+		}
+		if ft == FR_BREAK {
+			break
+		}
+		if len(c.stepExcpression) != 0 {
+			err := ExecuteExpressions(flowcontext, c.stepExcpression)
+			if err != nil {
+				return FR_ERROR, err
+			}
+		}
+	}
 	return FR_CONINUE, nil
 }
 
@@ -105,7 +140,11 @@ func (c *FlowLoop) DoFlow(flowcontext IContext) (FlowResult, error) {
 //		}
 //	}
 func NewFlowTo(define *map[string]interface{}, flowInstance *FlowInstance) (*FlowTo, error) {
-	acts, err := CreateActivitys(define, flowInstance, []string{"gate"})
+	target := utils.GetArrayFromMap(define, "target")
+	if target == nil {
+		return nil, fmt.Errorf("创建toflow失败,没有target属性")
+	}
+	acts, err := CreateActivitys(target, flowInstance)
 	if err != nil {
 		return nil, err
 	}
@@ -135,30 +174,68 @@ func NewFlowIfTo(define *map[string]interface{}, flowInstance *FlowInstance) (*F
 		return nil, fmt.Errorf("创建ifto失败，没有if属性")
 	}
 	f.expression = exp.(string)
-	then := utils.GetMapFromMap(define, "then")
+	then := utils.GetArrayFromMap(define, "then")
 	if then == nil {
 		return nil, fmt.Errorf("创建ifto失败，没有then属性")
 	}
-	am, err := CreateActivitys(then, flowInstance, nil)
+	am, err := CreateActivitys(then, flowInstance)
 	if err != nil {
 		return nil, fmt.Errorf("创建ifto失败，then创建失败，%s", err.Error())
 	}
 	f.thenAct = am
-	els := utils.GetMapFromMap(define, "else")
+	els := utils.GetArrayFromMap(define, "else")
 	if els != nil {
-		f.elseThenAct, err = CreateActivitys(els, flowInstance, nil)
+		f.elseThenAct, err = CreateActivitys(els, flowInstance)
 		if err != nil {
 			return nil, fmt.Errorf("创建ifto失败，else 创建失败，%s", err.Error())
 		}
 	}
 	return f, nil
 }
-func NewFlowLoop(define *map[string]interface{}, flowInstance *FlowInstance) (*FlowLoop, error) {
+
+// 			{
+//                "gate":"loop",
+//                "assign":["",""],
+//                "while":"",
+//                "step":["",""],
+//                "do":{
+//                    "activity2":{}
+//                }
+//          }
+// 创建循环flow
+func NewFlowLoop(def *map[string]interface{}, flowInstance *FlowInstance) (*FlowLoop, error) {
 	f := &FlowLoop{
 		Flow: Flow{
 			gate: F_IFLOOP,
 		},
 	}
+	m := (*def)["assign"]
+	if m != nil {
+		dd := m.([]interface{})
+		f.assignExpression = make([]string, len(dd), len(dd))
+		for index, d := range dd {
+			f.assignExpression[index] = d.(string)
+		}
+	}
+	m = (*def)["step"]
+	if m != nil {
+		dd := m.([]interface{})
+		f.stepExcpression = make([]string, len(dd), len(dd))
+		for index, d := range dd {
+			f.stepExcpression[index] = d.(string)
+		}
+	}
+	wh, ok := (*def)["while"]
+	if !ok {
+		return nil, fmt.Errorf("创建flowLoop失败，while属性是必须的")
+	}
+	f.whileExpression = wh.(string)
+	doacts := utils.GetArrayFromMap(def, "do")
+	sct, err := CreateActivitys(doacts, flowInstance)
+	if err != nil {
+		return nil, fmt.Errorf("创建flowLoop失败，创建do节点失败，%s", err.Error())
+	}
+	f.dotarget = sct
 	return f, nil
 }
 

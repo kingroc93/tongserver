@@ -123,24 +123,24 @@ func (c *JedaController) GetIdsList() {
 	var result = &datasource.DataResultSet{}
 	result.Fields = make(datasource.FieldDescType)
 	result.Fields["ID"] = &datasource.FieldDesc{
-		FieldType: utils.PropertyDatatypeStr,
+		FieldType: datasource.PropertyDatatypeStr,
 		Index:     0,
 		Meta:      &map[string]string{"CAP": "编号"}}
 	result.Fields["IdsName"] = &datasource.FieldDesc{
-		FieldType: utils.PropertyDatatypeStr,
+		FieldType: datasource.PropertyDatatypeStr,
 		Index:     1,
 		Meta:      &map[string]string{"CAP": "数据源名称"}}
 	result.Fields["TableName"] = &datasource.FieldDesc{
-		FieldType: utils.PropertyDatatypeStr,
+		FieldType: datasource.PropertyDatatypeStr,
 		Index:     2,
 		Meta:      &map[string]string{"CAP": "表名"}}
 	result.Fields["DbAlias"] = &datasource.FieldDesc{
-		FieldType: utils.PropertyDatatypeStr,
+		FieldType: datasource.PropertyDatatypeStr,
 		Index:     3,
 		Meta:      &map[string]string{"CAP": "数据库别名"}}
 
 	result.Fields["Writeable"] = &datasource.FieldDesc{
-		FieldType: utils.PropertyDatatypeStr,
+		FieldType: datasource.PropertyDatatypeStr,
 		Index:     4,
 		Meta:      &map[string]string{"CAP": "是否可写"}}
 	result.Data = make([][]interface{}, 0, len(ids))

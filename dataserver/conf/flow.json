@@ -15,7 +15,7 @@
       {
         "gate": "to",
         "activity1": {
-          "style": "InnerService|Message|Loop|Stdout",
+          "style": "InnerService|Message|Loop|Stdout|Gate",
           "params": {},
           "flow": [
             {
@@ -38,8 +38,9 @@
             },
             {
               "gate":"loop",
-              "var":[{},{}],
-              "range":"",
+              "assign":[{},{}],
+              "step":[{},{}],
+              "while": "",
               "do":{}
             }
           ]

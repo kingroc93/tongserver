@@ -317,5 +317,5 @@ func (c *SHandlerBase) setPageParams(ids datasource.IDataSource) {
 
 // ConvertString2Type 转换字符串为指定的类型，转换不成功返回nil
 func (c *SHandlerBase) ConvertString2Type(value string, vtype string) (interface{}, error) {
-	return utils.ConvertString2Type(value, vtype)
+	return datasource.ConvertString2Type(value, vtype)
 }

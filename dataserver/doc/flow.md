@@ -83,10 +83,13 @@ flow节点是一个对象或者是一个数组：
                   "gate":"break"
               },
               {
-                  "gate":"loop",
-                  "var":[{},{}],
-                  "range":"",
-                  "do":{} 
+                  "gate":"loop",                
+                  "assign":["",""],
+                  "while":"",
+                  "step":["",""],
+                  "do":{
+                      "activity2":{}
+                  }
               }
           ]
       }
