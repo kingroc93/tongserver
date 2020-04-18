@@ -12,7 +12,8 @@ import (
 	"time"
 	"tongserver.dataserver/datasource"
 	"tongserver.dataserver/mgr"
-	_ "tongserver.dataserver/routers"
+	"tongserver.dataserver/routers"
+
 	"tongserver.dataserver/service"
 	_ "tongserver.dataserver/service"
 	"tongserver.dataserver/utils"
@@ -55,6 +56,7 @@ func reloadIds() error {
 		return err
 	}
 	datasource.IDSContainer = make(datasource.IDSContainerType)
+	logs.Info("加载数据源")
 	for _, row := range rs.Data {
 		//meta := make(map[string]interface{})
 		//err := json.Unmarshal([]byte(row[rs.Fields["META"].Index].(string)), &meta)
@@ -68,7 +70,9 @@ func reloadIds() error {
 		(*meta)["name"] = row[rs.Fields["NAME"].Index].(string)
 		(*meta)["projectid"] = row[rs.Fields["PROJECTID"].Index].(string)
 		datasource.IDSContainer[(*meta)["projectid"].(string)+"."+(*meta)["name"].(string)] = (*meta)
+		logs.Info("    %s %s %s %s", (*meta)["inf"], (*meta)["dbalias"], (*meta)["name"], (*meta)["projectid"])
 	}
+
 	return nil
 }
 func CreateIDSCreator() {
@@ -152,9 +156,9 @@ func ReadCfg() {
 	}
 }
 func RunApp() {
-
 	ReadCfg()
 	CreateIDSCreator()
+	routers.RegisterRoutes()
 	// 启动beego应用程序
 	beego.InsertFilter("*", beego.BeforeRouter, cors.Allow(&cors.Options{
 		AllowOrigins:     []string{"http://localhost:8080"},

@@ -40,6 +40,18 @@ func TestExpression_DoExpression(t *testing.T) {
 	fmt.Println(b)
 }
 
+func TestReplaceExpressionL(t *testing.T) {
+	cnt := NewContext()
+	cnt.SetVarbiable("x", 1)
+	cnt.SetVarbiable("y", 2)
+	s, err := ReplaceExpressionL(cnt, "x=}")
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+	fmt.Println(s)
+}
+
 func TestSplitAssignExpression(t *testing.T) {
 	fmt.Println(SplitAssignExpression("a =1+1"))
 	fmt.Println(SplitAssignExpression(" a = 1+1"))

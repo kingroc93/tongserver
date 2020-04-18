@@ -139,7 +139,7 @@ func (c *FlowLoop) DoFlow(flowcontext IContext) (FlowResult, error) {
 //			"style":"stdout"
 //		}
 //	}
-func NewFlowTo(define *map[string]interface{}, flowInstance *FlowInstance) (*FlowTo, error) {
+func NewFlowTo(define *map[string]interface{}, flowInstance *FlowInstance) (IFlow, error) {
 	target := utils.GetArrayFromMap(define, "target")
 	if target == nil {
 		return nil, fmt.Errorf("创建toflow失败,没有target属性")
@@ -163,7 +163,7 @@ func NewFlowTo(define *map[string]interface{}, flowInstance *FlowInstance) (*Flo
 //    "then":{},
 //    "else":{}
 //}
-func NewFlowIfTo(define *map[string]interface{}, flowInstance *FlowInstance) (*FlowIfTo, error) {
+func NewFlowIfTo(define *map[string]interface{}, flowInstance *FlowInstance) (IFlow, error) {
 	f := &FlowIfTo{
 		Flow: Flow{
 			gate: F_IFTO,
@@ -203,7 +203,7 @@ func NewFlowIfTo(define *map[string]interface{}, flowInstance *FlowInstance) (*F
 //                }
 //          }
 // 创建循环flow
-func NewFlowLoop(def *map[string]interface{}, flowInstance *FlowInstance) (*FlowLoop, error) {
+func NewFlowLoop(def *map[string]interface{}, flowInstance *FlowInstance) (IFlow, error) {
 	f := &FlowLoop{
 		Flow: Flow{
 			gate: F_IFLOOP,
@@ -248,17 +248,11 @@ func NewFlow(d *map[string]interface{}, flowInstance *FlowInstance) (IFlow, erro
 	if !ok {
 		return nil, fmt.Errorf("gate属性类型必须是string")
 	}
-
-	if sg == "to" {
-		return NewFlowTo(d, flowInstance)
+	f, ok := flowCreatorFunContainer[sg]
+	if !ok {
+		return nil, fmt.Errorf("没有找到gate属性为%s的构造器", sg)
 	}
-	if sg == "ifto" {
-		return NewFlowIfTo(d, flowInstance)
-	}
-	if sg == "loop" {
-		return NewFlowLoop(d, flowInstance)
-	}
-	return nil, nil
+	return f(d, flowInstance)
 }
 func CreateFlows(flows []interface{}, inst *FlowInstance) ([]IFlow, error) {
 	if len(flows) > 0 {
@@ -277,4 +271,14 @@ func CreateFlows(flows []interface{}, inst *FlowInstance) ([]IFlow, error) {
 		return iflows, nil
 	}
 	return nil, nil
+}
+
+// 用于创建flow的构造器
+type FlowCreatorFun func(define *map[string]interface{}, flowInstance *FlowInstance) (IFlow, error)
+
+// flow的构造器的容器
+var flowCreatorFunContainer = make(map[string]FlowCreatorFun)
+
+func RegisterFlowCreator(gateName string, f FlowCreatorFun) {
+	flowCreatorFunContainer[gateName] = f
 }

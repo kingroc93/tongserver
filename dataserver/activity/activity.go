@@ -46,9 +46,9 @@ type StdOutActivity struct {
 }
 
 // 创建一个控制台输出活动
-func NewStdOutActivity(acti *Activity) *StdOutActivity {
+func NewStdOutActivity(acti *Activity) (IActivity, error) {
 	act := &StdOutActivity{Activity: *acti}
-	return act
+	return act, nil
 }
 
 // 创建一组活动
@@ -126,24 +126,29 @@ func CreateActivity(def *map[string]interface{}, inst *FlowInstance) (IActivity,
 		return nil, fmt.Errorf("创建Activity失败，%s", err.Error())
 	}
 	acti.flows = fs
-	////////////////////////////////////////////////////
-	if style == "normal" {
 
+	f, ok := acitvityCreatorFunContainer[sStyle]
+	if !ok {
+		return nil, fmt.Errorf("没有找到style属性为%s的构造器", sStyle)
 	}
-	if sStyle == "stdout" {
-		act := NewStdOutActivity(acti)
-		return act, nil
-	}
-	if sStyle == "innerservice" {
-		return nil, nil
-	}
-	if sStyle == "message" {
-		return nil, nil
-	}
-	if sStyle == "process" {
-		return nil, nil
-	}
-	return nil, nil
+	return f(acti)
+	//////////////////////////////////////////////////////
+	//if style == "normal" {
+	//
+	//}
+	//if sStyle == "stdout" {
+	//	return NewStdOutActivity(acti)
+	//}
+	//if sStyle == "innerservice" {
+	//	return nil, nil
+	//}
+	//if sStyle == "message" {
+	//	return nil, nil
+	//}
+	//if sStyle == "process" {
+	//	return nil, nil
+	//}
+	//return nil, nil
 }
 
 // StdOutActivity 执行方法，目前是将所有变量输出到控制台，其实没什么用
@@ -160,3 +165,13 @@ func (c *StdOutActivity) Execute(flowcontext IContext) error {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// 用于创建flow的构造器
+type AcitvityCreatorFun func(acti *Activity) (IActivity, error)
+
+// flow的构造器的容器
+var acitvityCreatorFunContainer = make(map[string]AcitvityCreatorFun)
+
+func RegisterAcitvityCreator(gateName string, f AcitvityCreatorFun) {
+	acitvityCreatorFunContainer[gateName] = f
+}

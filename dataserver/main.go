@@ -26,6 +26,5 @@ import (
 // redis.pwd = 123456
 
 func main() {
-
 	app.RunApp()
 }

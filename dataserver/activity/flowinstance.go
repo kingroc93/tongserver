@@ -17,6 +17,7 @@ type FlowInstance struct {
 	GlobaActivityContainer *map[string]*IActivity
 }
 
+// 执行流程
 func (c *FlowInstance) Execute(params *map[string]interface{}) error {
 	if params != nil {
 		for k, v := range *params {
@@ -31,10 +32,10 @@ func (c *FlowInstance) Execute(params *map[string]interface{}) error {
 			}
 		}
 	}
-
 	return c.ExecuteFlows(c)
 }
 
+// 根据JSON创建流程
 func NewFlowInstanceFromJSON(json string) (*FlowInstance, error) {
 	ma, err := utils.ParseJSONStr2Map(json)
 	if err != nil {
@@ -43,6 +44,7 @@ func NewFlowInstanceFromJSON(json string) (*FlowInstance, error) {
 	return NewFlowInstance(ma)
 }
 
+// 根据map创建流程
 func NewFlowInstance(define *map[string]interface{}) (*FlowInstance, error) {
 	n, ok := (*define)["name"]
 	if !ok {
@@ -89,6 +91,7 @@ func NewFlowInstance(define *map[string]interface{}) (*FlowInstance, error) {
 			}
 		}
 	}
+
 	fs, err := CreateFlows(flows, inst)
 	if err != nil {
 		return nil, fmt.Errorf("创建NewFlowInstance实例失败，创建flows失败，%s", err.Error())

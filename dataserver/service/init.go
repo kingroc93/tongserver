@@ -1,9 +1,5 @@
 package service
 
-import (
-	"github.com/astaxie/beego"
-)
-
 // CommonParamsType 请求的通用参数
 type CommonParamsType struct {
 	Name   string
@@ -44,10 +40,4 @@ type SRequestBody struct {
 	Bulldozer []*CommonParamsType
 	// PostAction 后处理节点，针对查询操作
 	PostAction []*CommonParamsType
-}
-
-func init() {
-	// 所有服务请求的入口函数
-	beego.Router("/services/?:context/?:action", &SController{}, "get,post:DoSrv")
-
 }

@@ -27,6 +27,10 @@ const (
 	PropertyDatetypeMap string = "MAP"
 	// 数组类型
 	PropertyDatetypeArray string = "ARRAY"
+	// struct
+	PropertyDatetypeStruct string = "STRUCT"
+	// func
+	PropertyDatetypeFunc string = "FUNC"
 )
 
 // TDFilter 过滤条件
@@ -387,6 +391,10 @@ func RelectType2InnerType(obj interface{}) string {
 			return PropertyDatetypeArray
 		case reflect.Map:
 			return PropertyDatetypeMap
+		case reflect.Struct:
+			return PropertyDatetypeStruct
+		case reflect.Func:
+			return PropertyDatetypeFunc
 		}
 		return PropertyDatatypeUnkn
 	}
@@ -401,7 +409,9 @@ func ValidPropertyType(ty string) bool {
 		ty == PropertyDatatypeDs ||
 		ty == PropertyDatatypeUnkn ||
 		ty == PropertyDatetypeMap ||
-		ty == PropertyDatetypeArray {
+		ty == PropertyDatetypeArray ||
+		ty == PropertyDatetypeFunc ||
+		ty == PropertyDatetypeStruct {
 		return true
 	}
 	return false
