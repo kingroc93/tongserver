@@ -132,23 +132,6 @@ func CreateActivity(def *map[string]interface{}, inst *FlowInstance) (IActivity,
 		return nil, fmt.Errorf("没有找到style属性为%s的构造器", sStyle)
 	}
 	return f(acti)
-	//////////////////////////////////////////////////////
-	//if style == "normal" {
-	//
-	//}
-	//if sStyle == "stdout" {
-	//	return NewStdOutActivity(acti)
-	//}
-	//if sStyle == "innerservice" {
-	//	return nil, nil
-	//}
-	//if sStyle == "message" {
-	//	return nil, nil
-	//}
-	//if sStyle == "process" {
-	//	return nil, nil
-	//}
-	//return nil, nil
 }
 
 // StdOutActivity 执行方法，目前是将所有变量输出到控制台，其实没什么用

@@ -51,7 +51,7 @@ type IDataSource interface {
 	//根据主键返回数据
 	QueryDataByKey(keyvalues ...interface{}) (*DataResultSet, error)
 	//根据字段值返回匹配的数据
-	QueryDataByFieldValues(fv *map[string]interface{}) (*DataResultSet, error)
+	QueryDataByFieldValues(fv map[string]interface{}) (*DataResultSet, error)
 	GetKeyFields() []*MyProperty
 	GetFields() []*MyProperty
 	GetFieldByName(name string) *MyProperty
@@ -173,7 +173,7 @@ type FieldDesc struct {
 	FieldType string
 	Index     int
 	// Meta 字段元数据，默认由PostAction中的配置信息为fieldmeta的处理程序填充
-	Meta *map[string]string
+	Meta map[string]string
 }
 
 // FieldDescType 字段描述类型

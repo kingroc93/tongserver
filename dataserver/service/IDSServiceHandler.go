@@ -256,7 +256,7 @@ func (c *IDSServiceHandler) getUserFilterValues(values interface{}) []string {
 		var rs *datasource.DataResultSet
 		var err error
 		if len(values) == 1 {
-			rs, err = dids.QueryDataByFieldValues(&map[string]interface{}{filterkey: values[0]})
+			rs, err = dids.QueryDataByFieldValues(map[string]interface{}{filterkey: values[0]})
 		} else {
 			dids.AddCriteria(filterkey, datasource.OperIn, values)
 			rs, err = dids.DoFilter()
@@ -662,10 +662,9 @@ func (c *IDSServiceHandler) doPostAction(dataSet *datasource.DataResultSet, rBod
 					o, ok := mf[k]
 					if ok {
 						if item.Meta == nil {
-							m := make(map[string]string)
-							item.Meta = &m
+							item.Meta = make(map[string]string)
 						}
-						(*item.Meta)["CAP"] = o
+						item.Meta["CAP"] = o
 					}
 				}
 			}

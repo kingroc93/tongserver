@@ -61,10 +61,10 @@ func (c *SQLDataSource) GetName() string {
 	return c.Name
 }
 
-func (c *SQLDataSource) QueryDataByFieldValues(fv *map[string]interface{}) (*DataResultSet, error) {
+func (c *SQLDataSource) QueryDataByFieldValues(fv map[string]interface{}) (*DataResultSet, error) {
 
 	c.ClearCriteria()
-	for pname, value := range *fv {
+	for pname, value := range fv {
 		c.AndCriteria(pname, OperEq, value)
 	}
 	return c.DoFilter()

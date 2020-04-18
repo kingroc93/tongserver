@@ -140,9 +140,9 @@ func (c *TableDataSource) Init() error {
 }
 
 // QueryDataByFieldValues 根据字段值返回数据
-func (c *TableDataSource) QueryDataByFieldValues(fv *map[string]interface{}) (*DataResultSet, error) {
+func (c *TableDataSource) QueryDataByFieldValues(fv map[string]interface{}) (*DataResultSet, error) {
 	c.ClearCriteria()
-	for pname, value := range *fv {
+	for pname, value := range fv {
 		c.AndCriteria(pname, OperEq, value)
 	}
 	return c.DoFilter()

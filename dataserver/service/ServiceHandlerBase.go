@@ -99,7 +99,6 @@ func (c *SHandlerBase) getServiceInterface(meta map[string]interface{}, sdef *SD
 func (c *SHandlerBase) DoSrv(sdef *SDefine, inf SHandlerInterface) {
 	//////////////////////////////////////////////////////////////////////////
 	//调用传入的接口中的方法实现下面的功能,因为需要通过不同的接口实现来实现不同的行为
-
 	//meta := make(map[string]interface{})
 	//err2 := json.Unmarshal([]byte(metestr), &meta)
 	meta, err2 := utils.ParseJSONStr2Map(sdef.Meta)

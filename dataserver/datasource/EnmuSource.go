@@ -125,6 +125,6 @@ func (c *KeyStringSource) QueryDataByKey(keyvalues ...interface{}) (*DataResultS
 }
 
 // QueryDataByFieldValues 该数据源此方法无意义
-func (c *KeyStringSource) QueryDataByFieldValues(fv *map[string]interface{}) (*DataResultSet, error) {
+func (c *KeyStringSource) QueryDataByFieldValues(fv map[string]interface{}) (*DataResultSet, error) {
 	return nil, fmt.Errorf("Use QueryDataByKey")
 }

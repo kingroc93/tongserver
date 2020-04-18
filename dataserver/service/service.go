@@ -88,18 +88,8 @@ func (c *ServiceControllerBase) GetRequestBody() []byte {
 		return nil
 	}
 }
-
-// reloadSrvMetaFromDatabase 从数据库中加载服务定义信息
-func (c *SController) reloadSrvMetaFromDatabase(cnt string) (*SDefine, error) {
+func QueryServiceFromDB(cnt string) (*SDefine, error) {
 	ps := strings.Split(cnt, ".")
-	if len(ps) != 2 && len(ps) != 1 {
-		return nil, fmt.Errorf("上下文格式不正确")
-	}
-	sdef, ok := SDefineContainer[cnt]
-
-	if ok {
-		return sdef, nil
-	}
 	ds := datasource.CreateTableDataSource("GSERVICE", "default", "G_SERVICE")
 	if len(ps) == 2 {
 		ds.AddCriteria("NAMESPACE", datasource.OperEq, ps[0]).AndCriteria("CONTEXT", datasource.OperEq, ps[1])
@@ -128,6 +118,20 @@ func (c *SController) reloadSrvMetaFromDatabase(cnt string) (*SDefine, error) {
 		ProjectId:   rs.Data[0][rs.Fields["PROJECTID"].Index].(string)}
 	SDefineContainer[cnt] = srv
 	return srv, nil
+}
+
+// reloadSrvMetaFromDatabase 从数据库中加载服务定义信息
+func (c *SController) reloadSrvMetaFromDatabase(cnt string) (*SDefine, error) {
+	ps := strings.Split(cnt, ".")
+	if len(ps) != 2 && len(ps) != 1 {
+		return nil, fmt.Errorf("上下文格式不正确")
+	}
+	sdef, ok := SDefineContainer[cnt]
+
+	if ok {
+		return sdef, nil
+	}
+	return QueryServiceFromDB(cnt)
 }
 
 // DoSrv 处理请求
