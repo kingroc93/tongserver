@@ -15,7 +15,7 @@ const (
 
 // DoExpression
 func DoExpression(expression string, context IContext) (interface{}, error) {
-	return DoExpression2(expression, *context.getVariableMap())
+	return DoExpression2(expression, context.getVariableMap())
 }
 
 // 执行表达式
@@ -33,7 +33,7 @@ func DoExpression2(expression string, env map[string]interface{}) (interface{}, 
 
 // 执行表达式并返回bool类型
 func DoExpressionBool(expression string, context IContext) (bool, error) {
-	return DoExpressionBool2(expression, *context.getVariableMap())
+	return DoExpressionBool2(expression, context.getVariableMap())
 }
 
 // 运行表达式 返回true or false
@@ -48,7 +48,7 @@ func DoExpressionBool2(expression string, env map[string]interface{}) (bool, err
 // 执行一堆表达式。有一个出错则返回错误信息忽略后面的表达式
 // 支持赋值表达式，=号左侧为变量名，如果上下文里存在则替换，如果不存在则创建
 func ExecuteExpressions(flowcontext IContext, exps []string) error {
-	env := *flowcontext.getVariableMap()
+	env := flowcontext.getVariableMap()
 	vmap := make(map[string]interface{})
 	for _, exp := range exps {
 		v, e, ok := SplitAssignExpression(exp)

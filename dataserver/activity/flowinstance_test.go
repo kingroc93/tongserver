@@ -49,7 +49,7 @@ func TestNewFlowToInstance(t *testing.T) {
 	r := map[string]interface{}{
 		"name": "menghui",
 	}
-	err = fl.Execute(&r)
+	err = fl.Execute(r)
 	if err != nil {
 		fmt.Println(err)
 		t.Fail()
@@ -100,7 +100,7 @@ func TestIfFlowToInstance(t *testing.T) {
 	r := map[string]interface{}{
 		"name": "menghui2",
 	}
-	err = fl.Execute(&r)
+	err = fl.Execute(r)
 	if err != nil {
 		fmt.Println(err)
 		t.Fail()
@@ -143,7 +143,7 @@ func TestFlowLoopInstance(t *testing.T) {
 	r := map[string]interface{}{
 		"name": "menghui2",
 	}
-	err = fl.Execute(&r)
+	err = fl.Execute(r)
 	if err != nil {
 		fmt.Println(err)
 		t.Fail()

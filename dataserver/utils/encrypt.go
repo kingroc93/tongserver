@@ -149,25 +149,25 @@ func DecodeURLBase64(input string) string {
 }
 
 // 将json字符串转换为map
-func ParseJSONStr2Map(jsonstr string) (*map[string]interface{}, error) {
+func ParseJSONStr2Map(jsonstr string) (map[string]interface{}, error) {
 	meta := make(map[string]interface{})
 	err2 := json.Unmarshal([]byte(jsonstr), &meta)
 	if err2 != nil {
 		logs.Error("parseJSONStr2Map:解析json字符串时发生错误，%s", err2)
 		return nil, err2
 	}
-	return &meta, nil
+	return meta, nil
 }
 
 // 将json字符串转换为map
-func ParseJSONBytes2Map(jsonbyte []byte) (*map[string]interface{}, error) {
+func ParseJSONBytes2Map(jsonbyte []byte) (map[string]interface{}, error) {
 	meta := make(map[string]interface{})
 	err2 := json.Unmarshal(jsonbyte, &meta)
 	if err2 != nil {
 		logs.Error("parseJSONStr2Map:解析json字符串时发生错误，%s", err2)
 		return nil, err2
 	}
-	return &meta, nil
+	return meta, nil
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

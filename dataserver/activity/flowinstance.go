@@ -13,17 +13,17 @@ type FlowInstance struct {
 	Flows
 	id                     string
 	name                   string
-	define                 *map[string]interface{}
-	GlobaActivityContainer *map[string]*IActivity
+	define                 map[string]interface{}
+	GlobaActivityContainer map[string]*IActivity
 }
 
 // 执行流程
-func (c *FlowInstance) Execute(params *map[string]interface{}) error {
+func (c *FlowInstance) Execute(params map[string]interface{}) error {
 	if params != nil {
-		for k, v := range *params {
-			_, ok := (*c.varbiable)[k]
+		for k, v := range params {
+			_, ok := c.varbiable[k]
 			if ok {
-				(*c.varbiable)[k] = v
+				c.varbiable[k] = v
 			} else {
 				err := c.CreateVarbiable2(k, datasource.RelectType2InnerType(v), v)
 				if err != nil {
@@ -45,8 +45,8 @@ func NewFlowInstanceFromJSON(json string) (*FlowInstance, error) {
 }
 
 // 根据map创建流程
-func NewFlowInstance(define *map[string]interface{}) (*FlowInstance, error) {
-	n, ok := (*define)["name"]
+func NewFlowInstance(define map[string]interface{}) (*FlowInstance, error) {
+	n, ok := define["name"]
 	if !ok {
 		return nil, fmt.Errorf("创建流程实例失败，没有name属性")
 	}
@@ -66,17 +66,17 @@ func NewFlowInstance(define *map[string]interface{}) (*FlowInstance, error) {
 	ty := make(map[string]string)
 	inst := &FlowInstance{
 		Context: Context{
-			varbiable:      &t,
-			varbiableTypes: &ty,
+			varbiable:      t,
+			varbiableTypes: ty,
 		},
 
 		name:   n.(string),
 		define: define,
 
-		GlobaActivityContainer: &gs,
+		GlobaActivityContainer: gs,
 	}
 	if vs != nil {
-		for k, v := range *vs {
+		for k, v := range vs {
 			err := inst.CreateVarbiable(k, utils.ConvertObj2Map(v))
 			if err != nil {
 				return nil, err
@@ -84,7 +84,7 @@ func NewFlowInstance(define *map[string]interface{}) (*FlowInstance, error) {
 		}
 	}
 	if ps != nil {
-		for k, v := range *ps {
+		for k, v := range ps {
 			err := inst.CreateVarbiable(k, utils.ConvertObj2Map(v))
 			if err != nil {
 				return nil, err

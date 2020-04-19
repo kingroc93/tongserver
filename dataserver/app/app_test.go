@@ -21,11 +21,11 @@ var TOKEN = ""
 // 用于测试的RequestResponse类
 type innerRRHandler struct {
 	body []byte
-	p    *map[string]string
+	p    map[string]string
 }
 
 // CreateInnerRR
-func CreateInnerRR(bo []byte, pa *map[string]string) service.RequestResponseHandler {
+func CreateInnerRR(bo []byte, pa map[string]string) service.RequestResponseHandler {
 	return &innerRRHandler{bo, pa}
 }
 
@@ -44,7 +44,7 @@ func (c *innerRRHandler) CreateResponseData(style int, data interface{}) {
 
 // GetParam
 func (c *innerRRHandler) GetParam(name string) string {
-	return (*c.p)[name]
+	return c.p[name]
 }
 
 // GetRequestBody
@@ -66,14 +66,14 @@ func TestMain(m *testing.M) {
 }
 
 // 发送post请求
-func postData(path string, jsondata string, header *map[string]string) *map[string]interface{} {
+func postData(path string, jsondata string, header map[string]string) map[string]interface{} {
 	url := SRV_URL + path //
 	client := &http.Client{}
 	req, _ := http.NewRequest("POST", url, bytes.NewBuffer([]byte(jsondata)))
 	req.Method = "POST"
 	req.Header.Set("Content-Type", "application/json")
 	if header != nil {
-		for key, value := range *header {
+		for key, value := range header {
 			req.Header.Set(key, value)
 		}
 	}
@@ -103,11 +103,11 @@ func TestCreateUserToken(t *testing.T) {
 	"Password":"123"
 	}`
 	rm := postData("/token/create", jsonData, nil)
-	if (*rm)["token"] == false {
+	if rm["token"] == false {
 		t.Fatalf("登录失败")
 		return
 	}
-	TOKEN = (*rm)["token"].(string)
+	TOKEN = rm["token"].(string)
 	fmt.Println("TOKEN IS:" + TOKEN)
 }
 
@@ -118,7 +118,7 @@ func TestJeda_meta(t *testing.T) {
 		return
 	}
 	jsonData := `{}`
-	postData("/services/jeda.meta/all?_repstyle=map", jsonData, &map[string]string{"Authorization": TOKEN})
+	postData("/services/jeda.meta/all?_repstyle=map", jsonData, map[string]string{"Authorization": TOKEN})
 }
 
 // 创建用于系统管理的默认服务
@@ -148,7 +148,7 @@ func serviceCall(srvtype string, sdef *service.SDefine) {
 	ReadCfg()
 	CreateIDSCreator()
 	f := service.SHandlerContainer[srvtype]
-	rrh := CreateInnerRR([]byte("{}"), &map[string]string{
+	rrh := CreateInnerRR([]byte("{}"), map[string]string{
 		":action":   "all",
 		"_repstyle": "map"})
 	h := f(rrh, "lvxing")

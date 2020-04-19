@@ -106,7 +106,7 @@ func (c *SHandlerBase) DoSrv(sdef *SDefine, inf SHandlerInterface) {
 		c.createErrorResponse("meta信息不正确,应为JSON格式")
 		return
 	}
-	obj, err := inf.getServiceInterface(*meta, sdef)
+	obj, err := inf.getServiceInterface(meta, sdef)
 	if err != nil {
 		c.createErrorResponse(err.Error())
 		return
@@ -125,7 +125,7 @@ func (c *SHandlerBase) DoSrv(sdef *SDefine, inf SHandlerInterface) {
 		c.createErrorResponse("请求的动作当前服务没有实现")
 		return
 	}
-	f(sdef, *meta, ids, rBody)
+	f(sdef, meta, ids, rBody)
 }
 
 func (c *SHandlerBase) getActionMap() map[string]SerivceActionHandler {

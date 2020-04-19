@@ -1,5 +1,10 @@
 package service
 
+import (
+	"github.com/astaxie/beego"
+	"tongserver.dataserver/activity"
+)
+
 // CommonParamsType 请求的通用参数
 type CommonParamsType struct {
 	Name   string
@@ -40,4 +45,21 @@ type SRequestBody struct {
 	Bulldozer []*CommonParamsType
 	// PostAction 后处理节点，针对查询操作
 	PostAction []*CommonParamsType
+}
+
+// init 初始化
+func init() {
+	SHandlerContainer[SrvTypeIds] = func(c RequestResponseHandler, caller string) SHandlerInterface {
+		return &IDSServiceHandler{SHandlerBase{RRHandler: c, CurrentUserId: caller}}
+	}
+	SHandlerContainer[SrvTypePredef] = func(c RequestResponseHandler, caller string) SHandlerInterface {
+		return &PredefineServiceHandler{IDSServiceHandler: IDSServiceHandler{SHandlerBase{RRHandler: c, CurrentUserId: caller}}}
+	}
+	SHandlerContainer[SrvValueKey] = func(c RequestResponseHandler, caller string) SHandlerInterface {
+		return &ValueKeyService{SHandlerBase{RRHandler: c, CurrentUserId: caller}}
+	}
+	HASHSECRET = beego.AppConfig.String("jwt.token.hashsecret")
+	TokenExpire, _ = beego.AppConfig.Int64("jwt.token.expire")
+
+	activity.RegisterAcitvityCreator("InnerService", CreateInnerServiceActivity)
 }

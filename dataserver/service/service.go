@@ -88,15 +88,9 @@ func (c *ServiceControllerBase) GetRequestBody() []byte {
 		return nil
 	}
 }
-func QueryServiceFromDB(cnt string) (*SDefine, error) {
-	ps := strings.Split(cnt, ".")
+func QueryServiceFromDB(cnt string, ns string, context string) (*SDefine, error) {
 	ds := datasource.CreateTableDataSource("GSERVICE", "default", "G_SERVICE")
-	if len(ps) == 2 {
-		ds.AddCriteria("NAMESPACE", datasource.OperEq, ps[0]).AndCriteria("CONTEXT", datasource.OperEq, ps[1])
-	}
-	if len(ps) == 1 {
-		ds.AddCriteria("CONTEXT", datasource.OperEq, ps[0]).AndCriteria("CONTEXT", datasource.OperEq, "")
-	}
+	ds.AddCriteria("NAMESPACE", datasource.OperEq, ns).AndCriteria("CONTEXT", datasource.OperEq, context)
 	rs, err := ds.DoFilter()
 	if err != nil {
 		return nil, err
@@ -104,7 +98,6 @@ func QueryServiceFromDB(cnt string) (*SDefine, error) {
 	if len(rs.Data) == 0 {
 		return nil, fmt.Errorf("没有找到对应的服务" + cnt)
 	}
-
 	srv := &SDefine{
 		ServiceId:   rs.Data[0][rs.Fields["ID"].Index].(string),
 		Context:     rs.Data[0][rs.Fields["CONTEXT"].Index].(string),
@@ -121,17 +114,20 @@ func QueryServiceFromDB(cnt string) (*SDefine, error) {
 }
 
 // reloadSrvMetaFromDatabase 从数据库中加载服务定义信息
-func (c *SController) reloadSrvMetaFromDatabase(cnt string) (*SDefine, error) {
+func GetSrvMetaFromPath(cnt string) (*SDefine, error) {
 	ps := strings.Split(cnt, ".")
 	if len(ps) != 2 && len(ps) != 1 {
 		return nil, fmt.Errorf("上下文格式不正确")
 	}
 	sdef, ok := SDefineContainer[cnt]
-
 	if ok {
 		return sdef, nil
 	}
-	return QueryServiceFromDB(cnt)
+	if len(ps) == 2 {
+		return QueryServiceFromDB(cnt, ps[0], ps[1])
+	} else {
+		return QueryServiceFromDB(cnt, ps[0], "")
+	}
 }
 
 // DoSrv 处理请求
@@ -140,7 +136,7 @@ func (c *SController) DoSrv() {
 	cnt := c.Ctx.Input.Param(":context")
 	//根据上下文获取服务定义信息
 	//默认是从数据库获取
-	sdef, err := c.reloadSrvMetaFromDatabase(cnt)
+	sdef, err := GetSrvMetaFromPath(cnt)
 	if err != nil {
 		utils.CreateErrorResponse(err.Error(), &c.Controller)
 		return
@@ -170,17 +166,4 @@ func (c *SController) DoSrv() {
 	h := handler(c, userid)
 	h.DoSrv(sdef, h)
 	c.ServeJSON()
-}
-
-// init 初始化
-func init() {
-	SHandlerContainer[SrvTypeIds] = func(c RequestResponseHandler, caller string) SHandlerInterface {
-		return &IDSServiceHandler{SHandlerBase{RRHandler: c, CurrentUserId: caller}}
-	}
-	SHandlerContainer[SrvTypePredef] = func(c RequestResponseHandler, caller string) SHandlerInterface {
-		return &PredefineServiceHandler{IDSServiceHandler: IDSServiceHandler{SHandlerBase{RRHandler: c, CurrentUserId: caller}}}
-	}
-	SHandlerContainer[SrvValueKey] = func(c RequestResponseHandler, caller string) SHandlerInterface {
-		return &ValueKeyService{SHandlerBase{RRHandler: c, CurrentUserId: caller}}
-	}
 }

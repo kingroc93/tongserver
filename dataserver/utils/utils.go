@@ -269,8 +269,8 @@ func (f String) String() string {
 }
 
 // 从map里面获取数组
-func GetArrayFromMap(m *map[string]interface{}, name string) []interface{} {
-	v, ok := (*m)[name].([]interface{})
+func GetArrayFromMap(m map[string]interface{}, name string) []interface{} {
+	v, ok := m[name].([]interface{})
 	if !ok {
 		return nil
 	}
@@ -278,20 +278,20 @@ func GetArrayFromMap(m *map[string]interface{}, name string) []interface{} {
 }
 
 // 从map里面获取map[string]interface{}
-func GetMapFromMap(m *map[string]interface{}, name string) *map[string]interface{} {
-	v, ok := (*m)[name]
+func GetMapFromMap(m map[string]interface{}, name string) map[string]interface{} {
+	v, ok := m[name]
 	if !ok {
 		return nil
 	}
 	return ConvertObj2Map(v)
 }
 
-func ConvertObj2Map(obj interface{}) *map[string]interface{} {
+func ConvertObj2Map(obj interface{}) map[string]interface{} {
 	m, ok := obj.(map[string]interface{})
 	if !ok {
 		return nil
 	}
-	return &m
+	return m
 }
 
 // 将interfa{}转换为bool类型

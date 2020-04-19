@@ -11,6 +11,7 @@ import (
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 type IActivity interface {
 	Execute(flowcontext IContext) error
+	GetDef() map[string]interface{}
 }
 
 // 基础活动
@@ -19,11 +20,15 @@ type Activity struct {
 	Flows
 	Style  string
 	Exp    []string
-	define *map[string]interface{}
+	define map[string]interface{}
 }
 
 func (c *Activity) executeExp(flowcontext IContext) error {
 	return ExecuteExpressions(flowcontext, c.Exp)
+}
+
+func (c *Activity) GetDef() map[string]interface{} {
+	return c.define
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -57,7 +62,7 @@ func CreateActivitys(define []interface{}, flowInstance *FlowInstance) ([]*IActi
 	for _, v := range define {
 		if reflect.TypeOf(v).Kind() == reflect.String {
 			//值是字符串时表示直接引用之前声明过得activity
-			act, ok := (*flowInstance.GlobaActivityContainer)[v.(string)]
+			act, ok := flowInstance.GlobaActivityContainer[v.(string)]
 			if !ok {
 				return nil, fmt.Errorf("没有找到已经声明的activity，%s", v)
 			}
@@ -67,7 +72,7 @@ func CreateActivitys(define []interface{}, flowInstance *FlowInstance) ([]*IActi
 			defm := v.(map[string]interface{})
 			actname, hasname := defm["name"]
 			if hasname {
-				_, ok := (*flowInstance.GlobaActivityContainer)[actname.(string)]
+				_, ok := flowInstance.GlobaActivityContainer[actname.(string)]
 				if ok {
 					return nil, fmt.Errorf("创建flow失败，Actitity名称不唯一")
 				}
@@ -80,18 +85,18 @@ func CreateActivitys(define []interface{}, flowInstance *FlowInstance) ([]*IActi
 			}
 			var actp IActivity = nil
 			if hasname {
-				(*flowInstance.GlobaActivityContainer)[actname.(string)] = &actp
+				flowInstance.GlobaActivityContainer[actname.(string)] = &actp
 			}
 			act, err := CreateActivity(m, flowInstance)
 			if err != nil {
 				if hasname {
-					delete((*flowInstance.GlobaActivityContainer), actname.(string))
+					delete(flowInstance.GlobaActivityContainer, actname.(string))
 				}
 				return nil, fmt.Errorf("创建flow失败，%s", err)
 			}
 			acts = append(acts, &act)
 			if hasname {
-				*(*flowInstance.GlobaActivityContainer)[actname.(string)] = act
+				*(flowInstance.GlobaActivityContainer)[actname.(string)] = act
 			}
 
 		}
@@ -100,8 +105,8 @@ func CreateActivitys(define []interface{}, flowInstance *FlowInstance) ([]*IActi
 }
 
 // 创建活动
-func CreateActivity(def *map[string]interface{}, inst *FlowInstance) (IActivity, error) {
-	style, ok := (*def)["style"]
+func CreateActivity(def map[string]interface{}, inst *FlowInstance) (IActivity, error) {
+	style, ok := (def)["style"]
 	if !ok {
 		return nil, fmt.Errorf("创建Activiti失败，缺少style属性")
 	}
@@ -111,7 +116,7 @@ func CreateActivity(def *map[string]interface{}, inst *FlowInstance) (IActivity,
 	acti := &Activity{define: def}
 	acti.Style = sStyle
 	////////////////////////////////////////////////////
-	m := (*def)["expressions"]
+	m := (def)["expressions"]
 	if m != nil {
 		dd := m.([]interface{})
 		acti.Exp = make([]string, len(dd), len(dd))

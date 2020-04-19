@@ -139,7 +139,7 @@ func (c *FlowLoop) DoFlow(flowcontext IContext) (FlowResult, error) {
 //			"style":"stdout"
 //		}
 //	}
-func NewFlowTo(define *map[string]interface{}, flowInstance *FlowInstance) (IFlow, error) {
+func NewFlowTo(define map[string]interface{}, flowInstance *FlowInstance) (IFlow, error) {
 	target := utils.GetArrayFromMap(define, "target")
 	if target == nil {
 		return nil, fmt.Errorf("创建toflow失败,没有target属性")
@@ -163,13 +163,13 @@ func NewFlowTo(define *map[string]interface{}, flowInstance *FlowInstance) (IFlo
 //    "then":{},
 //    "else":{}
 //}
-func NewFlowIfTo(define *map[string]interface{}, flowInstance *FlowInstance) (IFlow, error) {
+func NewFlowIfTo(define map[string]interface{}, flowInstance *FlowInstance) (IFlow, error) {
 	f := &FlowIfTo{
 		Flow: Flow{
 			gate: F_IFTO,
 		},
 	}
-	exp, ok := (*define)["if"]
+	exp, ok := define["if"]
 	if !ok {
 		return nil, fmt.Errorf("创建ifto失败，没有if属性")
 	}
@@ -203,13 +203,13 @@ func NewFlowIfTo(define *map[string]interface{}, flowInstance *FlowInstance) (IF
 //                }
 //          }
 // 创建循环flow
-func NewFlowLoop(def *map[string]interface{}, flowInstance *FlowInstance) (IFlow, error) {
+func NewFlowLoop(def map[string]interface{}, flowInstance *FlowInstance) (IFlow, error) {
 	f := &FlowLoop{
 		Flow: Flow{
 			gate: F_IFLOOP,
 		},
 	}
-	m := (*def)["assign"]
+	m := def["assign"]
 	if m != nil {
 		dd := m.([]interface{})
 		f.assignExpression = make([]string, len(dd), len(dd))
@@ -217,7 +217,7 @@ func NewFlowLoop(def *map[string]interface{}, flowInstance *FlowInstance) (IFlow
 			f.assignExpression[index] = d.(string)
 		}
 	}
-	m = (*def)["step"]
+	m = def["step"]
 	if m != nil {
 		dd := m.([]interface{})
 		f.stepExcpression = make([]string, len(dd), len(dd))
@@ -225,7 +225,7 @@ func NewFlowLoop(def *map[string]interface{}, flowInstance *FlowInstance) (IFlow
 			f.stepExcpression[index] = d.(string)
 		}
 	}
-	wh, ok := (*def)["while"]
+	wh, ok := def["while"]
 	if !ok {
 		return nil, fmt.Errorf("创建flowLoop失败，while属性是必须的")
 	}
@@ -239,8 +239,8 @@ func NewFlowLoop(def *map[string]interface{}, flowInstance *FlowInstance) (IFlow
 	return f, nil
 }
 
-func NewFlow(d *map[string]interface{}, flowInstance *FlowInstance) (IFlow, error) {
-	gate, ok := (*d)["gate"]
+func NewFlow(d map[string]interface{}, flowInstance *FlowInstance) (IFlow, error) {
+	gate, ok := d["gate"]
 	if !ok {
 		return nil, fmt.Errorf("缺少gate属性")
 	}
@@ -274,7 +274,7 @@ func CreateFlows(flows []interface{}, inst *FlowInstance) ([]IFlow, error) {
 }
 
 // 用于创建flow的构造器
-type FlowCreatorFun func(define *map[string]interface{}, flowInstance *FlowInstance) (IFlow, error)
+type FlowCreatorFun func(define map[string]interface{}, flowInstance *FlowInstance) (IFlow, error)
 
 // flow的构造器的容器
 var flowCreatorFunContainer = make(map[string]FlowCreatorFun)

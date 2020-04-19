@@ -179,15 +179,15 @@ func (c *TokenService) VerifyTokenCtx(ctx *context.Context) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("invalid Authorization in request header")
 	}
-	m := *meta
+
 	n := time.Now().UnixNano()
-	if n-int64(m["time"].(float64)) > TokenExpire*1e9 {
+	if n-int64(meta["time"].(float64)) > TokenExpire*1e9 {
 		return "", fmt.Errorf("invalid Authorization in request header")
 	}
-	m["time"] = time.Now().UnixNano()
-	jss, _ := utils.ConvertJSON(m)
+	meta["time"] = time.Now().UnixNano()
+	jss, _ := utils.ConvertJSON(meta)
 	ctx.ResponseWriter.Header().Add("token", utils.EncodeURLBase64(jss)+"."+utils.GetHmacCode(js, HASHSECRET))
-	return m["userid"].(string), nil
+	return meta["userid"].(string), nil
 }
 
 // VerifyToken 验证令牌是否合法，从beego控制器中获取令牌信息

@@ -13,9 +13,6 @@ import (
 	"tongserver.dataserver/datasource"
 	"tongserver.dataserver/mgr"
 	"tongserver.dataserver/routers"
-
-	"tongserver.dataserver/service"
-	_ "tongserver.dataserver/service"
 	"tongserver.dataserver/utils"
 	//	_ "github.com/mattn/go-oci8"
 )
@@ -65,12 +62,12 @@ func reloadIds() error {
 			logs.Error("加载数据源的时候发生错误，%s,%s", row[rs.Fields["META"].Index], err)
 			continue
 		}
-		(*meta)["inf"] = row[rs.Fields["INF"].Index].(string)
-		(*meta)["dbalias"] = row[rs.Fields["DBALIAS"].Index].(string)
-		(*meta)["name"] = row[rs.Fields["NAME"].Index].(string)
-		(*meta)["projectid"] = row[rs.Fields["PROJECTID"].Index].(string)
-		datasource.IDSContainer[(*meta)["projectid"].(string)+"."+(*meta)["name"].(string)] = (*meta)
-		logs.Info("    %s %s %s %s", (*meta)["inf"], (*meta)["dbalias"], (*meta)["name"], (*meta)["projectid"])
+		meta["inf"] = row[rs.Fields["INF"].Index].(string)
+		meta["dbalias"] = row[rs.Fields["DBALIAS"].Index].(string)
+		meta["name"] = row[rs.Fields["NAME"].Index].(string)
+		meta["projectid"] = row[rs.Fields["PROJECTID"].Index].(string)
+		datasource.IDSContainer[meta["projectid"].(string)+"."+meta["name"].(string)] = (meta)
+		logs.Info("    %s %s %s %s", meta["inf"], meta["dbalias"], meta["name"], meta["projectid"])
 	}
 
 	return nil
@@ -135,9 +132,6 @@ func ReadCfg() {
 	if k, _ := beego.AppConfig.Bool("db.default.password.encrypted"); k {
 
 	}
-
-	service.HASHSECRET = beego.AppConfig.String("jwt.token.hashsecret")
-	service.TokenExpire, _ = beego.AppConfig.Int64("jwt.token.expire")
 
 	if dbtype == "mysql" {
 		dburl := username + ":" + pwd + "@tcp(" + beego.AppConfig.String("db.default.ipport") + ")/" + beego.AppConfig.String("db.default.database")
