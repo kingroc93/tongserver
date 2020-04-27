@@ -2,16 +2,14 @@ package service
 
 import (
 	"fmt"
+	"github.com/astaxie/beego/logs"
+	"reflect"
+	"strings"
 	"tongserver.dataserver/activity"
 	"tongserver.dataserver/utils"
 	"tongserver.dataserver/utils/mapstructure"
 )
 
-// "InnerService": {
-// 		"style": "InnerService",
-// 		"url":"${}",
-// 		"params": {},
-// }
 // 内部服务活动
 // 在流程中调用内部的服务
 type InnerServiceActivity struct {
@@ -22,15 +20,22 @@ type InnerServiceActivity struct {
 	params      map[string]string
 	resultData  interface{}
 	resultStyle int
+	context     activity.IContext
 }
 
 func (c *InnerServiceActivity) Execute(flowcontext activity.IContext) error {
-	sdef, err := GetSrvMetaFromPath(c.cnt)
+	c.context = flowcontext
+	cnt, err := activity.ReplaceExpressionLStr(flowcontext, c.cnt)
+	if err != nil {
+		logs.Error("InnerServiceActivity:Execute:解析EL表达式错误")
+		return err
+	}
+	sdef, err := GetSrvMetaFromPath(cnt)
 	if err != nil {
 		return err
 	}
 	if !sdef.Enabled {
-		return fmt.Errorf("请求的服务%s未启用", c.cnt)
+		return fmt.Errorf("请求的服务%s未启用", cnt)
 	}
 	userid := ""
 	if sdef.Security {
@@ -50,31 +55,103 @@ func (c *InnerServiceActivity) Execute(flowcontext activity.IContext) error {
 	h := handler(c, userid)
 	h.DoSrv(sdef, h)
 	if c.rv == "" {
-		c.rv = c.cnt + "_result"
+		c.rv = cnt + "_result"
 	}
 	flowcontext.SetVarbiable(c.rv, c.GetResponseData())
 	return nil
 }
+func (c *InnerServiceActivity) GetResponseData() interface{} {
+	return c.resultData
+}
 
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// type RequestResponseHandler interface {
+//	CreateResponseData(style int, data interface{})
+//	GetParam(name string) string
+//	GetRequestBody() (*SRequestBody, error)
+//}
+// 实现RequestResponseHandler接口
 func (c *InnerServiceActivity) CreateResponseData(style int, data interface{}) {
 	c.resultStyle = style
 	c.resultData = data
 }
-func (c *InnerServiceActivity) GetResponseData() interface{} {
-	return c.resultData
-}
+
 func (c *InnerServiceActivity) GetParam(name string) string {
-	return c.params[name]
+	s, err := activity.ReplaceExpressionLStr(c.context, c.params[name])
+	if err != nil {
+		logs.Error("处理EL表达式发生错误，%s", err.Error())
+		return c.params[name]
+	} else {
+		return s
+	}
+}
+
+// 不完整的替换EL表达式方法，只处理了Array、Slice、Map、String这几种类型
+// Array、Slice会重置为[]interface{}
+// Map 会重置为map[string]interface{}
+func (c *InnerServiceActivity) replaceBodyEL(v interface{}) interface{} {
+	switch reflect.TypeOf(v).Kind() {
+	case reflect.Map:
+		{
+			s := reflect.ValueOf(v)
+			pvs := make(map[string]interface{})
+			vs := s.MapKeys()
+			for _, k := range vs {
+				nv := c.replaceBodyEL(s.MapIndex(k).Interface())
+				pvs[k.Interface().(string)] = nv
+			}
+			return pvs
+		}
+	case reflect.Slice, reflect.Array:
+		{
+			s := reflect.ValueOf(v)
+			pvs := make([]interface{}, s.Len(), s.Len())
+			for i := 0; i < s.Len(); i++ {
+				pvs[i] = c.replaceBodyEL(s.Index(i).Interface())
+			}
+			return pvs
+		}
+	case reflect.String:
+		{
+			s := strings.TrimSpace(v.(string))
+			if s[:2] == "${" {
+				//一上来就是EL表达式的
+				eL, err := activity.ReplaceExpressionL(c.context, s)
+				if err != nil {
+					logs.Error("处理EL表达式发生错误，%s", err.Error())
+					return v
+				}
+				return eL
+			} else {
+				//在字符串中间的EL表达式
+				eL, err := activity.ReplaceExpressionLStr(c.context, v.(string))
+				if err != nil {
+					logs.Error("处理EL表达式发生错误，%s", err.Error())
+					return v
+				}
+				return eL
+			}
+		}
+	default:
+		return v
+	}
 }
 
 func (c *InnerServiceActivity) GetRequestBody() (*SRequestBody, error) {
 	r := &SRequestBody{}
-	err := mapstructure.Decode(c.body, r)
+	m := make(map[string]interface{})
+	for k, v := range c.body {
+		m[k] = c.replaceBodyEL(v)
+	}
+	err := mapstructure.Decode(m, r)
 	if err != nil {
 		return nil, err
 	}
 	return r, nil
 }
+
+// 实现RequestResponseHandler接口结束
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // 	{
 //		"style" : "innerservice",
@@ -85,11 +162,6 @@ func (c *InnerServiceActivity) GetRequestBody() (*SRequestBody, error) {
 //		"rbody":{}
 //	}
 func CreateInnerServiceActivity(acti *activity.Activity) (activity.IActivity, error) {
-	// TODO: 这个地方添加创建InnerServiceActivit的方法
-	// 1、通过memRRHandler类来调用内部服务
-	// 2、模仿app_test中的代码调用内部服务
-	// 3、该活动执行的时候需要考虑如何获取上下文的问题，目前打算类似预定义服务的方式，将服务请求的JSON描述放到流程的定义中，使用EL表达式来替换其中的值，这似乎是一个好办法。
-	// 4、似乎需要增加一个活动用来专门从请求中获取参数，然后拼接然后启动。
 	cnt := acti.GetDef()["cnt"]
 	if cnt == nil || cnt.(string) == "" {
 		return nil, fmt.Errorf("CreateInnerServiceActivity:cnt属性不能为空")
@@ -118,5 +190,4 @@ func CreateInnerServiceActivity(acti *activity.Activity) (activity.IActivity, er
 	act.body = rb
 	act.cnt = cnt.(string)
 	return act, nil
-
 }

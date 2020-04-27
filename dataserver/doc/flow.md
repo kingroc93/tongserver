@@ -145,19 +145,70 @@ flow节点是一个对象或者是一个数组：
 
 属性名就是活动的名称，属性值定义活动的行为，一个活动至少包含style属性和flow属性，style定义活动的类型，flow定义活动执行结束后流程去向何处。params属性是可选的，定义活动需要用到的参数。
 
-#### style=InnerService
+#### style=stdout
+向控制台输出上下文中所有的变量，一般用于调试，没有什么其他意义
+
+#### style=script
+执行脚本的活动
+
+#### style=innerservice
 
 调用系统内部定义的服务，就是在G_Service表中保存的那些服务。G_Service服务调用需要用到三组参数，:action、QueryString、PostBody
 
 ```json
-"params":{
-    "surl":"服务地址namespace.context的形式",
-    "action":"请求的操作",
-    "querystring":{
-        "_repstyle":"map"
-    }
-    "body":{}
-}
+
+{
+	"name": "测试to flow",
+	"start": {
+	"params":{
+		"name":{"type":"string","value":"menghui"},
+		"age":{"type":"number","value":41}
+	},
+	"variables": {
+	   "var_a": {
+	     "type": "string",
+	     "value": "test var"
+	   },
+	   "var_b": {
+	     "type": "number",
+	     "value": 12
+	   }
+	},
+	"flow": [{
+		"gate":"to",	
+		"target":[{
+			"style" : "innerservice",
+			"resultvariable":"result",
+			"cnt":"jeda.meta",
+			"params":{
+				":action":"all"
+			},
+			"rbody":{}
+		}]
+	}]
+}}
+
 ```
 
 在params中可以使用采用${变量名}的方式来引用当前流程中的变量。
+
+如果请求的服务必须进行安全认证，则启动该活动时，上下文中必须具备userid这个参数，如果没有会报错
+
+服务执行的结果会存到上下文中由“resultvariable”指定的变量中，如果不指定resultvariable属性，则会将服务执行结果返给[CNT]_result这个变量中。
+
+
+
+上面请求中的rbody属性和通过restful接口访问服务的接口一致。
+
+
+
+#### 扩展的活动
+在系统默认活动基础上可以添加扩展的活动，通过RegisterAcitvityCreator方法添加活动的构造器，构造器函数声明为：
+``` go
+type AcitvityCreatorFun func(acti *Activity) (IActivity, error)
+```
+如innerservice构造器是在service包中声明的，如下：
+``` go
+activity.RegisterAcitvityCreator("innerservice", CreateInnerServiceActivity)
+```
+

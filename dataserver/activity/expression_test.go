@@ -40,11 +40,12 @@ func TestExpression_DoExpression(t *testing.T) {
 	fmt.Println(b)
 }
 
+// 测试EL表达式
 func TestReplaceExpressionL(t *testing.T) {
 	cnt := NewContext()
 	cnt.SetVarbiable("x", 1)
 	cnt.SetVarbiable("y", 2)
-	s, err := ReplaceExpressionL(cnt, "x=}")
+	s, err := ReplaceExpressionLStr(cnt, "x=${x+y},${y-x}")
 	if err != nil {
 		fmt.Println(err.Error())
 		return

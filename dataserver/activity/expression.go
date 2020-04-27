@@ -84,8 +84,25 @@ func SplitAssignExpression(expression string) (string, string, bool) {
 	return varname, nexp, true
 }
 
+func ReplaceExpressionL(flowcontext IContext, elstr string) (interface{}, error) {
+	si := strings.Index(elstr, EXP_LEFTDIV)
+	if si == -1 {
+		return elstr, nil
+	}
+	sj := strings.Index(elstr[si:], EXP_RIGHTDIV)
+	if sj == -1 {
+		return "", fmt.Errorf("EL表达式解析错误，表达式%s缺少%s", elstr, EXP_RIGHTDIV)
+	}
+	exp := elstr[si+2 : sj+si]
+	v, err := DoExpression(exp, flowcontext)
+	if err != nil {
+		return nil, fmt.Errorf("EL表达式解析错误，表达式%s，%s", elstr, err.Error())
+	}
+	return v, nil
+}
+
 // 计算EL表达式，返回替换后的字符串
-func ReplaceExpressionL(flowcontext IContext, elstr string) (string, error) {
+func ReplaceExpressionLStr(flowcontext IContext, elstr string) (string, error) {
 	si := strings.Index(elstr, EXP_LEFTDIV)
 	if si == -1 {
 		return elstr, nil
@@ -99,7 +116,7 @@ func ReplaceExpressionL(flowcontext IContext, elstr string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("EL表达式解析错误，表达式%s，%s", elstr, err.Error())
 	}
-	right, err := ReplaceExpressionL(flowcontext, elstr[si+1+sj:])
+	right, err := ReplaceExpressionLStr(flowcontext, elstr[si+1+sj:])
 	if err != nil {
 		return "", fmt.Errorf("EL表达式解析错误，表达式%s，%s", elstr, err.Error())
 	}

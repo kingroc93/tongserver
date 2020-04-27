@@ -205,7 +205,8 @@ func Test_G_META(t *testing.T) {
 }
 
 func TestCallInnerService(t *testing.T) {
-	json := `{
+
+	jsonstr := `{
 	"name": "测试to flow",
 	"start": {
 	"params":{
@@ -227,7 +228,7 @@ func TestCallInnerService(t *testing.T) {
 		"target":[{
 			"style" : "innerservice",
 			"resultvariable":"result",
-			"cnt":"jeda.meta",
+			"cnt":"${url}",
 			"params":{
 				":action":"all"
 			},
@@ -237,17 +238,21 @@ func TestCallInnerService(t *testing.T) {
 }}`
 	ReadCfg()
 	CreateIDSCreator()
-	fl, err := activity.NewFlowInstanceFromJSON(json)
+	fl, err := activity.NewFlowInstanceFromJSON(jsonstr)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 	r := map[string]interface{}{
 		"userid": "lvxing",
+		"url":    "jeda.meta",
 	}
 	err = fl.Execute(r)
 	if err != nil {
 		fmt.Println(err)
 		t.Fail()
 	}
+	result := fl.GetVarbiableByName("result").(utils.RestResult)
+	b, err := json.Marshal(result)
+	fmt.Println(string(b))
 }
