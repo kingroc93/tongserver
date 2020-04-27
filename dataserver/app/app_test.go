@@ -10,6 +10,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"tongserver.dataserver/activity"
 	"tongserver.dataserver/datasource"
 	"tongserver.dataserver/service"
 	"tongserver.dataserver/utils"
@@ -48,8 +49,13 @@ func (c *innerRRHandler) GetParam(name string) string {
 }
 
 // GetRequestBody
-func (c *innerRRHandler) GetRequestBody() []byte {
-	return c.body
+func (c *innerRRHandler) GetRequestBody() (*service.SRequestBody, error) {
+	rBody := &service.SRequestBody{}
+	err := json.Unmarshal([]byte(c.body), rBody)
+	if err != nil {
+		return nil, fmt.Errorf("解析报文时发生错误%s", err.Error())
+	}
+	return rBody, nil
 }
 
 // 测试前初始化环境
@@ -196,4 +202,52 @@ func Test_G_META(t *testing.T) {
 				"outfield":  "PROJECTNAME",
 				"values":    "userid"}}})
 	serviceCall(service.SrvTypeIds, sdef)
+}
+
+func TestCallInnerService(t *testing.T) {
+	json := `{
+	"name": "测试to flow",
+	"start": {
+	"params":{
+		"name":{"type":"string","value":"menghui"},
+		"age":{"type":"number","value":41}
+	},
+	"variables": {
+	   "var_a": {
+	     "type": "string",
+	     "value": "test var"
+	   },
+	   "var_b": {
+	     "type": "number",
+	     "value": 12
+	   }
+	},
+	"flow": [{
+		"gate":"to",	
+		"target":[{
+			"style" : "innerservice",
+			"resultvariable":"result",
+			"cnt":"jeda.meta",
+			"params":{
+				":action":"all"
+			},
+			"rbody":{}
+		}]
+	}]
+}}`
+	ReadCfg()
+	CreateIDSCreator()
+	fl, err := activity.NewFlowInstanceFromJSON(json)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	r := map[string]interface{}{
+		"userid": "lvxing",
+	}
+	err = fl.Execute(r)
+	if err != nil {
+		fmt.Println(err)
+		t.Fail()
+	}
 }

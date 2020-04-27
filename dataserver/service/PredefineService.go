@@ -54,15 +54,13 @@ func (c *PredefineServiceHandler) merageRbody(rBody *SRequestBody) *SRequestBody
 
 // getRBody 返回请求体
 func (c *PredefineServiceHandler) getRBody() *SRequestBody {
-	bodystr := c.RRHandler.GetRequestBody()
-	if bodystr != nil {
-		rBody := &SRequestBody{}
-		if len(bodystr) != 0 {
-			err := json.Unmarshal([]byte(bodystr), rBody)
-			if err != nil {
-				c.createErrorResponse("解析报文时发生错误" + err.Error())
-			}
-		}
+
+	rBody, err := c.RRHandler.GetRequestBody()
+	if err != nil {
+		c.createErrorResponse("解析报文时发生错误" + err.Error())
+		return nil
+	}
+	if !rBody.IsEmpty() {
 		for i, cri := range c.predefine.SRequestBody.Criteria {
 			if cri.Value == ":?" {
 				c.predefine.SRequestBody.Criteria[i].Value = c.RRHandler.GetParam(cri.Field)

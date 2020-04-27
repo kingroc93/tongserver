@@ -65,7 +65,7 @@ type SHandlerInterface interface {
 type RequestResponseHandler interface {
 	CreateResponseData(style int, data interface{})
 	GetParam(name string) string
-	GetRequestBody() []byte
+	GetRequestBody() (*SRequestBody, error)
 }
 
 // SerivceActionHandler 处理请求的方法类型

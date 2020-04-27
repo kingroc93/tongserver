@@ -1,7 +1,6 @@
 package service
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/astaxie/beego/logs"
 	"github.com/rs/xid"
@@ -819,16 +818,10 @@ func (c *IDSServiceHandler) doGetValueByKey(sdef *SDefine, meta map[string]inter
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 返回请求报文
 func (c *IDSServiceHandler) getRBody() *SRequestBody {
-	var rBody *SRequestBody
-	bodystr := c.RRHandler.GetRequestBody()
-	if bodystr != nil {
-		rBody = &SRequestBody{}
-		err := json.Unmarshal([]byte(bodystr), rBody)
-		if err != nil {
-			c.createErrorResponse("解析报文时发生错误" + err.Error())
-		}
-	} else {
-		rBody = nil
+	rBody, err := c.RRHandler.GetRequestBody()
+	if err != nil {
+		c.createErrorResponse("解析报文时发生错误" + err.Error())
+		return nil
 	}
 	return rBody
 }

@@ -19,6 +19,12 @@ type CriteriaInRBody struct {
 	Relation  string
 }
 
+type AggreStruct struct {
+	Outfield  string
+	Predicate string
+	ColName   string
+}
+
 // SRequestBody 请求报文体
 type SRequestBody struct {
 	// Insert 新建
@@ -36,15 +42,15 @@ type SRequestBody struct {
 	// InnerJoin 内连接节点，针对查询操作
 	InnerJoin string
 	// Aggre 聚合节点，针对查询操作
-	Aggre []struct {
-		Outfield  string
-		Predicate string
-		ColName   string
-	}
+	Aggre []AggreStruct
 	// Bulldozer 推土机节点，针对查询操作
 	Bulldozer []*CommonParamsType
 	// PostAction 后处理节点，针对查询操作
 	PostAction []*CommonParamsType
+}
+
+func (c *SRequestBody) IsEmpty() bool {
+	return c.Insert == nil && c.Update == nil && c.Delete == "" && c.OperationConfirm == "" && c.Criteria == nil && c.OrderBy == "" && c.InnerJoin == "" && c.Aggre == nil && c.Bulldozer == nil && c.PostAction == nil
 }
 
 // init 初始化
@@ -61,5 +67,5 @@ func init() {
 	HASHSECRET = beego.AppConfig.String("jwt.token.hashsecret")
 	TokenExpire, _ = beego.AppConfig.Int64("jwt.token.expire")
 
-	activity.RegisterAcitvityCreator("InnerService", CreateInnerServiceActivity)
+	activity.RegisterAcitvityCreator("innerservice", CreateInnerServiceActivity)
 }

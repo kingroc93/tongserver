@@ -1,6 +1,7 @@
 package service
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/astaxie/beego"
 	"strings"
@@ -81,11 +82,16 @@ func (c *ServiceControllerBase) GetParam(name string) string {
 		return c.Input().Get(name)
 	}
 }
-func (c *ServiceControllerBase) GetRequestBody() []byte {
+func (c *ServiceControllerBase) GetRequestBody() (*SRequestBody, error) {
+	rBody := &SRequestBody{}
 	if c.Ctx.Request.Method == "POST" {
-		return c.Ctx.Input.RequestBody
+		err := json.Unmarshal([]byte(c.Ctx.Input.RequestBody), rBody)
+		if err != nil {
+			return nil, fmt.Errorf("解析报文时发生错误%s", err.Error())
+		}
+		return rBody, nil
 	} else {
-		return nil
+		return rBody, nil
 	}
 }
 func QueryServiceFromDB(cnt string, ns string, context string) (*SDefine, error) {
