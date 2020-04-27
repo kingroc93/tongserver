@@ -23,7 +23,7 @@ type Activity struct {
 	define map[string]interface{}
 }
 
-func (c *Activity) executeExp(flowcontext IContext) error {
+func (c *Activity) ExecuteExp(flowcontext IContext) error {
 	return ExecuteExpressions(flowcontext, c.Exp)
 }
 
@@ -141,7 +141,7 @@ func CreateActivity(def map[string]interface{}, inst *FlowInstance) (IActivity, 
 
 // StdOutActivity 执行方法，目前是将所有变量输出到控制台，其实没什么用
 func (c *StdOutActivity) Execute(flowcontext IContext) error {
-	err := c.executeExp(flowcontext)
+	err := c.ExecuteExp(flowcontext)
 	if err != nil {
 		return err
 	}

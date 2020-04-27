@@ -24,6 +24,10 @@ type InnerServiceActivity struct {
 }
 
 func (c *InnerServiceActivity) Execute(flowcontext activity.IContext) error {
+	err := c.ExecuteExp(flowcontext)
+	if err != nil {
+		return err
+	}
 	c.context = flowcontext
 	cnt, err := activity.ReplaceExpressionLStr(flowcontext, c.cnt)
 	if err != nil {

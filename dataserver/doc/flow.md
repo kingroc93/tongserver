@@ -200,7 +200,55 @@ flow节点是一个对象或者是一个数组：
 
 上面请求中的rbody属性和通过restful接口访问服务的接口一致。
 
+在param、rbody、cnt三个属性中，可以使用EL表达式${}来引用上下文中的变量。
 
+#### 模板活动（尚未实现）
+
+用于根据模板和上下文中的变量生成文本返回值，模板运行结果放到长下文中的变量里。
+
+``` json
+{
+	"name": "测试to flow",
+	"start": {
+	"params":{
+		"name":{"type":"string","value":"menghui"},
+		"age":{"type":"number","value":41}
+	},
+	"variables": {
+	   "var_a": {
+	     "type": "string",
+	     "value": "test var"
+	   },
+	   "var_b": {
+	     "type": "number",
+	     "value": 12
+	   }
+	},
+	"flow": [{
+		"gate":"to",	
+		"target":[{
+			"style" : "template",
+			"resultvariable":"result",
+            "template":""
+		}]
+	}]
+}}
+```
+
+resultvariable属性定义将模板输出放到哪个变量里面，template属性定义模板，分为以下类型：
+
+* string  直接定义模板的内容
+
+* 对象，按照以下格式定义
+
+  ``` javascript
+  {
+      "file":""  //默认模板文件夹下的模板文件
+      "url":""   //仅当file属性为空或不存在时起作用，系统通过此URL获取模板内容
+  }
+  ```
+
+  
 
 #### 扩展的活动
 在系统默认活动基础上可以添加扩展的活动，通过RegisterAcitvityCreator方法添加活动的构造器，构造器函数声明为：
