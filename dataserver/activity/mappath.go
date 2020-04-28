@@ -25,11 +25,25 @@ func parsePaths(ts []string, index int, m interface{}, context IContext, enabled
 		}
 	}
 	ty := reflect.TypeOf(m)
-	ns := name[:1]
-	if ns == "@" {
 
-	}
-	if ns == "[" {
+	if name[:1] != "[" {
+		// 取值操作
+		if ty.Kind() != reflect.Map {
+			return nil, fmt.Errorf("mappath解析错误，取值操作只能用于map")
+		}
+		mapvalue := reflect.ValueOf(m)
+		v := mapvalue.MapIndex(reflect.ValueOf(name))
+		if !v.IsValid() {
+			return nil, nil
+		} else {
+			if index != len(ts)-1 {
+				return parsePaths(ts, index+1, v.Interface(), context, enabledEL)
+			} else {
+				return v.Interface(), nil
+			}
+		}
+	} else {
+		// 切片操作
 		if ty.Kind() != reflect.Array && ty.Kind() != reflect.Slice {
 			return nil, fmt.Errorf("mappath解析错误，[]运算符只能用于数组或切片")
 		}
@@ -57,21 +71,41 @@ func parsePaths(ts []string, index int, m interface{}, context IContext, enabled
 				return nil, fmt.Errorf("mappath解析错误，语法错误,%s", sub)
 			}
 			start := 0
-			end := mapvalue.Len()
+			end := mapvalue.Len() - 1
 			if si[0] != "" {
-				start, err = utils.String(si[0]).Int()
-				if err != nil {
-					return nil, fmt.Errorf("mappath解析错误，字符串 %s 不能转换为数字，%s", si[0], name)
+				if si[1] != "" {
+					start, err = utils.String(si[0]).Int()
+					if err != nil {
+						return nil, fmt.Errorf("mappath解析错误，字符串 %s 不能转换为数字，%s", si[0], name)
+					}
+				} else {
+					end, err = utils.String(si[0]).Int()
+					if err != nil {
+						return nil, fmt.Errorf("mappath解析错误，字符串 %s 不能转换为数字，%s", si[0], name)
+					}
+					end = end - 1
 				}
 			}
-			if si[0] != "" {
-				end, err = utils.String(si[1]).Int()
-				if err != nil {
-					return nil, fmt.Errorf("mappath解析错误，字符串 %s 不能转换为数字，%s", si[1], name)
+			if si[1] != "" {
+				if si[0] != "" {
+					end, err = utils.String(si[1]).Int()
+					if err != nil {
+						return nil, fmt.Errorf("mappath解析错误，字符串 %s 不能转换为数字，%s", si[1], name)
+					}
+				} else {
+					start, err = utils.String(si[1]).Int()
+					if err != nil {
+						return nil, fmt.Errorf("mappath解析错误，字符串 %s 不能转换为数字，%s", si[1], name)
+					}
+					start = end - start + 1
 				}
 			}
-			if start >= end {
+
+			if start > end {
 				return nil, fmt.Errorf("mappath解析错误，%s，起始值大于等于终止值", sub)
+			}
+			if end > mapvalue.Len() || start > mapvalue.Len() {
+				return nil, fmt.Errorf("mappath解析错误，%s，索引越界", sub)
 			}
 			L := end - start + 1
 			result := reflect.MakeSlice(ty, L, L)
